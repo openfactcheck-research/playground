@@ -43,3 +43,6 @@ environments/
 
 # .env files
 .env*
+
+# Temp files
+tmp
