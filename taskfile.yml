@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+silent: true
+
+dotenv:
+  - .env
+  - .env.integration
+  - .env.production
+
+includes:
+  print:
+    taskfile: ./taskfiles/common.taskfile.yml
+    internal: true
+  check:
+    taskfile: ./taskfiles/check.taskfile.yml
+  deploy:
+    taskfile: ./taskfiles/deploy.taskfile.yml
+  app:
+    taskfile: ./taskfiles/app.taskfile.yml
+
+tasks:
+  default:
+    cmds:
+      - |
+        printf '{{.COLOR_CYAN}}{{.APP_NAME}} {{.APP_VERSION}}{{.COLOR_RESET}} ({{.COMMIT}})\n'
+        printf '{{.COLOR_YELLOW}}Environment:{{.COLOR_RESET}} %s\n\n' "${ENV:-development}"
+
+        printf '{{.COLOR_CYAN}}Namespaces{{.COLOR_RESET}}\n'
+        printf '  app      Frontend development (dev, build, lint)\n'
+        printf '  deploy   Infrastructure (init, plan, apply, destroy)\n'
+        printf '  check    Verify dependencies\n\n'
+
+        printf '{{.COLOR_CYAN}}Examples{{.COLOR_RESET}}\n'
+        printf '  task app                           Start dev server\n'
+        printf '  task deploy TARGET=<target>        Deploy infra changes\n\n'
+
+        printf '{{.COLOR_YELLOW}}Run "task --list" for all tasks{{.COLOR_RESET}}\n'
+
+  env:
+    desc: Display the active environment
+    cmds:
+      - printf 'Environment{{":"}} {{.COLOR_YELLOW}}%s{{.COLOR_RESET}}\n' "$ENV"

@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+tasks:
+  dev:
+    desc: Start development server
+    cmds:
+      - pnpm dev
+
+  build:
+    desc: Type-check and build for production
+    cmds:
+      - pnpm build
+
+  preview:
+    desc: Preview production build locally
+    cmds:
+      - pnpm preview
+
+  lint:
+    desc: Run ESLint
+    cmds:
+      - pnpm lint
+
+  lint:fix:
+    desc: Run ESLint with auto-fix
+    cmds:
+      - pnpm lint:fix
+
+  prepare:
+    desc: Setup Husky git hooks
+    cmds:
+      - pnpm prepare
+
+  install:
+    desc: Install dependencies
+    cmds:
+      - pnpm install
+
+  clean:
+    desc: Remove build artifacts and node_modules
+    cmds:
+      - rm -rf dist node_modules .vite
+
+  default:
+    desc: Start development server
+    cmds:
+      - task: dev

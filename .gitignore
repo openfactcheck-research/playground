@@ -33,3 +33,13 @@ coverage
 # Markdown files
 *.md
 !README.md
+
+# TF files
+*.tfstate
+*.tfstate.backup
+.terraform/
+accounts/
+environments/
+
+# .env files
+.env*
