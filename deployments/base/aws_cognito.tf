@@ -33,6 +33,30 @@ resource "aws_cognito_user_pool" "ofc_playground" {
     }
   }
 
+  # Custom email templates
+  verification_message_template {
+    default_email_option = "CONFIRM_WITH_CODE"
+    email_subject        = "Your OpenFactCheck verification code"
+    email_message        = <<-EOF
+      <html>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #005355; margin: 0;">OpenFactCheck</h1>
+          </div>
+          <p style="font-size: 16px; color: #333;">Welcome to OpenFactCheck Playground!</p>
+          <p style="font-size: 16px; color: #333;">Your verification code is:</p>
+          <div style="background: #f5f5f5; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #005355;">{####}</span>
+          </div>
+          <p style="font-size: 14px; color: #666;">This code expires in 24 hours.</p>
+          <p style="font-size: 14px; color: #666;">If you didn't request this, please ignore this email.</p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          <p style="font-size: 12px; color: #999; text-align: center;">OpenFactCheck - Fact-checking made easy</p>
+        </body>
+      </html>
+    EOF
+  }
+
   # Deletion protection
   deletion_protection = terraform.workspace == "production" ? "ACTIVE" : "INACTIVE"
 
