@@ -1,1 +1,5 @@
+# Scan staged files for secrets/credentials
+gitleaks protect --staged --verbose
+
+# Run linting on staged files
 pnpm exec lint-staged
