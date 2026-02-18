@@ -13,6 +13,37 @@ tasks:
     cmds:
       - pnpm build
 
+  deploy:
+    desc: Build and deploy to S3 + CloudFront (TARGET=<environment>)
+    dir: '{{.ROOT_DIR}}'
+    requires:
+      vars: [TARGET]
+    cmds:
+      - pnpm build
+      - |
+        source taskfiles/deploy.helpers.sh 2>/dev/null || source ./taskfiles/deploy.helpers.sh
+        prepare "{{.TARGET}}" "base" || exit 1
+
+        # Get AWS profile from tfvars
+        AWS_PROFILE=$(jq -r .aws_profile "$VAR_FILE")
+
+        cd deployments/base
+        tofu workspace select $WORKSPACE 2>/dev/null
+        BUCKET=$(tofu output -raw website_bucket_name)
+        DISTRIBUTION_ID=$(tofu output -raw cloudfront_distribution_id)
+        WEBSITE_URL=$(tofu output -raw website_url)
+        cd {{.ROOT_DIR}}
+
+        # Sync to S3
+        printf '{{.COLOR_CYAN}}Uploading to S3...{{.COLOR_RESET}}\n'
+        aws s3 sync dist/ s3://$BUCKET --delete --profile "$AWS_PROFILE"
+
+        # Invalidate CloudFront cache
+        printf '{{.COLOR_CYAN}}Invalidating CloudFront cache...{{.COLOR_RESET}}\n'
+        aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*" --profile "$AWS_PROFILE" > /dev/null
+
+        printf '{{.COLOR_GREEN}}✓ Deployed to: %s{{.COLOR_RESET}}\n' "$WEBSITE_URL"
+
   preview:
     desc: Preview production build locally
     cmds:

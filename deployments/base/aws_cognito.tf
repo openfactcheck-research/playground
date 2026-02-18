@@ -6,7 +6,7 @@ resource "aws_cognito_user_pool" "ofc_playground" {
   name = "ofc-playground-${terraform.workspace}-${var.aws_region}"
 
   # Users sign in with email as their username (instead of a separate username)
-  username_attributes      = ["email"]
+  username_attributes = ["email"]
 
   # Email is auto-verified when user confirms the code (OTP) sent during signup
   auto_verified_attributes = ["email"]
@@ -18,11 +18,11 @@ resource "aws_cognito_user_pool" "ofc_playground" {
 
   # Password policy
   password_policy {
-    minimum_length                   = 8
-    require_lowercase                = true
-    require_numbers                  = true
-    require_symbols                  = true
-    require_uppercase                = true
+    minimum_length    = 8
+    require_lowercase = true
+    require_numbers   = true
+    require_symbols   = true
+    require_uppercase = true
   }
 
   # Account recovery
@@ -37,7 +37,7 @@ resource "aws_cognito_user_pool" "ofc_playground" {
   deletion_protection = terraform.workspace == "production" ? "ACTIVE" : "INACTIVE"
 
   tags = {
-    Name        = "OpenFactCheck Playground - ${terraform.workspace}"
+    Name = "OpenFactCheck Playground - ${terraform.workspace}"
   }
 }
 
@@ -60,9 +60,9 @@ resource "aws_cognito_user_pool_client" "ofc_playground_client" {
   ]
 
   # Token validity settings
-  access_token_validity  = 1   # 1 hour
-  id_token_validity      = 1   # 1 hour
-  refresh_token_validity = 30  # 30 days
+  access_token_validity  = 1  # 1 hour
+  id_token_validity      = 1  # 1 hour
+  refresh_token_validity = 30 # 30 days
 
   token_validity_units {
     access_token  = "hours"
