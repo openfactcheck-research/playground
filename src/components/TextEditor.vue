@@ -28,7 +28,10 @@ const samples = [
 ]
 
 function cycleSample() {
-  emit('update:modelValue', samples[sampleIndex.value])
+  const sample = samples[sampleIndex.value]
+  if (sample) {
+    emit('update:modelValue', sample)
+  }
   sampleIndex.value = (sampleIndex.value + 1) % samples.length
 }
 
