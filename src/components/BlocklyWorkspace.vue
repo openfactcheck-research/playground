@@ -2,15 +2,25 @@
 import * as Blockly from 'blockly/core'
 import * as En from 'blockly/msg/en'
 import { pythonGenerator } from 'blockly/python'
-import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { createTheme } from '../config/blocklyTheme'
-import { toolboxConfig } from '../config/blocklyToolbox'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { registerAllBlocks } from '@/blockly/blocks'
+import { setInputText } from '@/blockly/blocks/claimInput'
+import { createTheme } from '@/blockly/theme'
+import { toolboxConfig } from '@/blockly/toolbox'
+import '@/blockly/styles.css'
 import 'blockly/blocks'
+
+const props = defineProps<{
+  inputText?: string
+}>()
 
 const emit = defineEmits<{
   codeChange: [code: string]
   blockCountChange: [count: number]
 }>()
+
+// Register custom blocks before workspace creation
+registerAllBlocks()
 
 // Events that trigger code regeneration (module-scoped for efficiency)
 const SUPPORTED_EVENTS: Set<string> = new Set([
@@ -113,6 +123,12 @@ function loadWorkspace(): void {
 
 defineExpose({ clearWorkspace, undo, redo, resize, saveWorkspace, loadWorkspace })
 
+// Watch for input text changes and regenerate code
+watch(() => props.inputText, (newText) => {
+  setInputText(newText ?? '')
+  generateCode()
+}, { immediate: true })
+
 function cleanup() {
   if (_themeObserver) {
     _themeObserver.disconnect()
@@ -167,7 +183,7 @@ onMounted(() => {
       wheel: true,
     },
     renderer: 'thrasos',
-    sounds: false,
+    sounds: true,
   })
   // Real-time code generation following official Blockly pattern
   _workspace.addChangeListener((event) => {

@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@blockly/field-multilineinput':
+        specifier: ^6.0.8
+        version: 6.0.8(blockly@12.4.1)
+      '@blockly/field-slider':
+        specifier: ^8.0.8
+        version: 8.0.8(blockly@12.4.1)
       '@vueuse/core':
         specifier: ^14.2.1
         version: 14.2.1(vue@3.5.28(typescript@5.9.3))
@@ -361,6 +367,18 @@ packages:
   '@babel/types@7.29.0':
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
+
+  '@blockly/field-multilineinput@6.0.8':
+    resolution: {integrity: sha512-jja+WdUztWxZxKFr0TVsVzG3QzrnddGfhaPFr7sly02CSB1sKpjPs82adjNbGcyfzC7uxY244GtBSe1MV6o5dQ==}
+    engines: {node: '>=8.0.0'}
+    peerDependencies:
+      blockly: ^12.0.0
+
+  '@blockly/field-slider@8.0.8':
+    resolution: {integrity: sha512-uG/Vq9eS17TvrRZZyvIEbknDcniwmLRVCP8FpgWmet4pwpCNrqERPTxP4/FQXRzbuHb/r+YeGjhRbXY367xfWw==}
+    engines: {node: '>=8.0.0'}
+    peerDependencies:
+      blockly: ^12.0.0
 
   '@clack/core@1.0.0':
     resolution: {integrity: sha512-Orf9Ltr5NeiEuVJS8Rk2XTw3IxNC2Bic3ash7GgYeA8LJ/zmSNpSQ/m5UAhe03lA6KFgklzZ5KTHs4OAMA/SAQ==}
@@ -3663,6 +3681,14 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
+
+  '@blockly/field-multilineinput@6.0.8(blockly@12.4.1)':
+    dependencies:
+      blockly: 12.4.1
+
+  '@blockly/field-slider@8.0.8(blockly@12.4.1)':
+    dependencies:
+      blockly: 12.4.1
 
   '@clack/core@1.0.0':
     dependencies:

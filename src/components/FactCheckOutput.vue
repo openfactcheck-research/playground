@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import VerdictBadge from './VerdictBadge.vue'
+import VerdictBadge from '@/components/VerdictBadge.vue'
 
 export type Evidence = {
   source: string

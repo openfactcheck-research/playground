@@ -155,6 +155,7 @@ function handleRedo() {
             <div class="relative flex-1 overflow-hidden">
               <BlocklyWorkspace
                 ref="blocklyRef"
+                :input-text="editorText"
                 @code-change="onCodeChange"
                 @block-count-change="onBlockCountChange"
               />

@@ -1,0 +1,37 @@
+/**
+ * Blockly-specific style overrides
+ * Imported by BlocklyWorkspace.vue
+ */
+
+/* Force black text on pastel blocks */
+.blocklyText {
+  fill: #000 !important;
+}
+
+.blocklyEditableText > text {
+  fill: #000 !important;
+}
+
+/* Field slider dropdown fixes */
+.blocklySliderDiv {
+  background-color: light-dark(#fff, #333) !important;
+}
+
+.blocklySliderDiv input[type='range'] {
+  accent-color: #b497e7;
+}
+
+/* Fix slider input text visibility */
+.blocklyHtmlInput {
+  color: light-dark(#212121, #212121) !important;
+  background-color: light-dark(#fff, #fff) !important;
+}
+
+/* Fix slider label/value text */
+.blocklyEditableText text {
+  fill: currentColor !important;
+}
+
+.blocklyDropDownDiv .blocklySliderLabel {
+  color: light-dark(#212121, #e0e0e0) !important;
+}

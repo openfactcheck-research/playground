@@ -6,7 +6,66 @@ export const toolboxConfig = {
       name: 'AI',
       categorystyle: 'ai_category',
       contents: [
-        { kind: 'block', type: 'llm_api' },
+        { kind: 'block', type: 'llm' },
+        { kind: 'block', type: 'prompt_template' },
+        { kind: 'block', type: 'agent' },
+      ],
+    },
+    {
+      kind: 'category',
+      name: 'Fact-Checking',
+      categorystyle: 'factcheck_category',
+      contents: [
+        // Pre-assembled pipeline template
+        {
+          kind: 'block',
+          type: 'claim_input',
+          next: {
+            block: {
+              type: 'claim_processor',
+              inputs: {
+                MODEL: {
+                  block: {
+                    type: 'llm',
+                    collapsed: true,
+                  },
+                },
+              },
+              next: {
+                block: {
+                  type: 'retriever',
+                  inputs: {
+                    MODEL: {
+                      block: {
+                        type: 'llm',
+                        collapsed: true,
+                      },
+                    },
+                  },
+                  next: {
+                    block: {
+                      type: 'verifier',
+                      inputs: {
+                        MODEL: {
+                          block: {
+                            type: 'llm',
+                            collapsed: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        { kind: 'sep', gap: '24' },
+        // Individual blocks
+        { kind: 'block', type: 'claim_input' },
+        { kind: 'block', type: 'claim_processor' },
+        { kind: 'block', type: 'retriever' },
+        { kind: 'block', type: 'verifier' },
       ],
     },
     { kind: 'sep' },
