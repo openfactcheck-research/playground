@@ -212,6 +212,12 @@ function handleRedo() {
   }
 }
 
+function handleClearWorkspace() {
+  if (blocklyRef.value) {
+    blocklyRef.value.clearWorkspace()
+  }
+}
+
 function handleCopy() {
   if (blocklyRef.value) {
     blocklyRef.value.copySelectedBlocks()
@@ -515,6 +521,18 @@ function handleImportAction(action: 'new-tab' | 'replace') {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+              </svg>
+            </button>
+            <!-- Clear workspace button -->
+            <button
+              class="flex shrink-0 items-center justify-center rounded p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              title="Clear all blocks"
+              aria-label="Clear workspace"
+              @click.stop="handleClearWorkspace"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
               </svg>
             </button>
             <!-- Separator -->
