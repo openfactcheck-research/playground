@@ -9,13 +9,34 @@ import {
   signIn as amplifySignIn,
   signOut as amplifySignOut,
   signUp as amplifySignUp,
+  updateUserAttributes as amplifyUpdateUserAttributes,
 } from 'aws-amplify/auth'
 import { ref } from 'vue'
+
+// User preferences type
+export type UserPreferences = {
+  tourCompleted?: boolean
+}
 
 // Reactive auth state
 const isAuthenticated = ref(false)
 const isLoading = ref(true)
 const user = ref<{ email: string, userId: string, name?: string } | null>(null)
+const preferences = ref<UserPreferences>({})
+
+/**
+ * Parse preferences from Cognito attribute
+ */
+function parsePreferences(prefsString: string | undefined): UserPreferences {
+  if (!prefsString)
+    return {}
+  try {
+    return JSON.parse(prefsString) as UserPreferences
+  }
+  catch {
+    return {}
+  }
+}
 
 export function useAuth() {
   /**
@@ -33,16 +54,19 @@ export function useAuth() {
           userId: currentUser.userId,
           name: attributes.name,
         }
+        preferences.value = parsePreferences(attributes['custom:preferences'])
         isAuthenticated.value = true
       }
       else {
         isAuthenticated.value = false
         user.value = null
+        preferences.value = {}
       }
     }
     catch {
       isAuthenticated.value = false
       user.value = null
+      preferences.value = {}
     }
     finally {
       isLoading.value = false
@@ -66,6 +90,7 @@ export function useAuth() {
         userId: currentUser.userId,
         name: attributes.name,
       }
+      preferences.value = parsePreferences(attributes['custom:preferences'])
       isAuthenticated.value = true
     }
 
@@ -143,6 +168,20 @@ export function useAuth() {
     await amplifySignOut()
     isAuthenticated.value = false
     user.value = null
+    preferences.value = {}
+  }
+
+  /**
+   * Update user preferences stored in Cognito
+   */
+  async function updatePreferences(updates: Partial<UserPreferences>) {
+    const newPrefs = { ...preferences.value, ...updates }
+    await amplifyUpdateUserAttributes({
+      userAttributes: {
+        'custom:preferences': JSON.stringify(newPrefs),
+      },
+    })
+    preferences.value = newPrefs
   }
 
   return {
@@ -150,6 +189,7 @@ export function useAuth() {
     isAuthenticated,
     isLoading,
     user,
+    preferences,
     // Methods
     checkAuth,
     signIn,
@@ -159,5 +199,6 @@ export function useAuth() {
     resetPassword,
     confirmResetPassword,
     signOut,
+    updatePreferences,
   }
 }

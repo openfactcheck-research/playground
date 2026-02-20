@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useAuth } from '@/composables/useAuth'
 
 const emit = defineEmits<{
   close: []
 }>()
 
-const STORAGE_KEY = 'welcome-tour-completed'
+const { preferences, updatePreferences } = useAuth()
 
 const isVisible = ref(false)
 const currentStep = ref(1)
@@ -145,8 +146,7 @@ watch(currentStep, async () => {
 let resizeObserver: ResizeObserver | null = null
 
 onMounted(() => {
-  const completed = localStorage.getItem(STORAGE_KEY)
-  if (!completed) {
+  if (!preferences.value.tourCompleted) {
     isVisible.value = true
     nextTick(() => updateTargetPosition())
 
@@ -182,7 +182,7 @@ function skip() {
 }
 
 function complete() {
-  localStorage.setItem(STORAGE_KEY, 'true')
+  updatePreferences({ tourCompleted: true })
   isVisible.value = false
   emit('close')
 }
