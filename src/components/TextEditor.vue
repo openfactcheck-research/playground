@@ -1,4 +1,12 @@
 <script setup lang="ts">
+import {
+  DialogClose,
+  DialogContent,
+  DialogOverlay,
+  DialogPortal,
+  DialogRoot,
+  DialogTitle,
+} from 'reka-ui'
 import { computed, nextTick, ref } from 'vue'
 
 const props = defineProps<{
@@ -12,6 +20,7 @@ const emit = defineEmits<{
 const collapsed = ref(false)
 const sampleIndex = ref(0)
 const showUrlInput = ref(false)
+const showExpandDialog = ref(false)
 const urlInput = ref('')
 const urlInputEl = ref<HTMLInputElement | null>(null)
 const isFetching = ref(false)
@@ -81,8 +90,6 @@ async function fetchUrl() {
 
     emit('update:modelValue', text)
     fetchSuccess.value = true
-    showUrlInput.value = false
-    urlInput.value = ''
   }
   catch (e: any) {
     fetchError.value = e.message || 'Failed to fetch content from URL.'
@@ -102,54 +109,129 @@ const wordCount = computed(() => {
 
 <template>
   <section class="flex flex-col border-b border-border bg-card">
-    <!-- Always-visible toggle header -->
-    <button
-      class="group flex w-full items-center gap-3 px-5 py-3 transition-colors hover:bg-secondary/30"
-      @click="collapsed = !collapsed"
-    >
-      <svg
-        width="18" height="18" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-        class="shrink-0 text-primary"
+    <!-- Header bar with title and action buttons -->
+    <div class="flex shrink-0 items-center border-border">
+      <!-- Left: toggle button with icon, title, and word count -->
+      <button
+        class="group flex flex-1 items-center gap-3 px-5 py-3 transition-colors hover:bg-secondary/30"
+        @click="collapsed = !collapsed"
       >
-        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-        <path d="m15 5 4 4" />
-      </svg>
-      <span class="text-sm font-semibold text-foreground">Input Text</span>
-      <span
-        v-if="modelValue"
-        class="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary"
+        <svg
+          width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          class="shrink-0 text-primary"
+        >
+          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+          <path d="m15 5 4 4" />
+        </svg>
+        <span class="text-sm font-semibold text-foreground">Input Text</span>
+        <span
+          v-if="modelValue"
+          class="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary"
+        >
+          {{ wordCount }} word{{ wordCount !== 1 ? 's' : '' }}
+        </span>
+        <span
+          v-else
+          class="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+        >
+          Empty
+        </span>
+      </button>
+
+      <!-- Right: action buttons -->
+      <span class="text-[10px] text-muted-foreground/60">{{ sampleIndex + 1 }}/{{ samples.length }}</span>
+      <!-- Try sample button -->
+      <button
+        class="flex shrink-0 items-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        title="Load a sample claim"
+        aria-label="Try a sample"
+        @click.stop="cycleSample"
       >
-        {{ wordCount }} word{{ wordCount !== 1 ? 's' : '' }}
-      </span>
-      <span
-        v-else
-        class="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        >
+          <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+          <path d="M21 3v5h-5" />
+        </svg>
+        <span>Sample</span>
+      </button>
+      <!-- Upload button -->
+      <label
+        class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        title="Upload a text file"
       >
-        Empty
-      </span>
-      <svg
-        width="16" height="16" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-        class="ml-auto shrink-0 text-muted-foreground transition-transform duration-200"
-        :class="collapsed ? '' : 'rotate-180'"
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        <span>Upload</span>
+        <input
+          type="file"
+          accept=".txt,.text,text/plain"
+          class="sr-only"
+          @change="handleFileUpload"
+        >
+      </label>
+      <!-- URL button -->
+      <button
+        class="flex shrink-0 items-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        title="Fetch content from URL"
+        aria-label="From URL"
+        @click.stop="openUrlInput"
       >
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
-    </button>
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        >
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+        </svg>
+        <span>URL</span>
+      </button>
+      <!-- Expand in dialog button -->
+      <button
+        class="flex shrink-0 items-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        title="Expand in dialog"
+        aria-label="Expand in dialog"
+        @click.stop="showExpandDialog = true"
+      >
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        >
+          <polyline points="15 3 21 3 21 9" />
+          <polyline points="9 21 3 21 3 15" />
+          <line x1="21" y1="3" x2="14" y2="10" />
+          <line x1="3" y1="21" x2="10" y2="14" />
+        </svg>
+        <span>Expand</span>
+      </button>
+      <!-- Collapse/expand button -->
+      <button
+        class="flex shrink-0 items-center justify-center px-4 py-3 text-muted-foreground transition-colors hover:bg-secondary/30"
+        @click="collapsed = !collapsed"
+      >
+        <svg
+          width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          class="transition-transform duration-200"
+          :class="collapsed ? '' : 'rotate-180'"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+    </div>
 
     <!-- Collapsible content -->
     <div v-show="!collapsed" class="border-t border-border px-5 py-2">
-      <textarea
-        :value="modelValue"
-        placeholder="Paste or type the text you want to fact-check..."
-        class="w-full resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none font-sans leading-relaxed"
-        rows="2"
-        @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
-      />
-
       <!-- URL input row (shown when active) -->
-      <div v-if="showUrlInput" class="flex items-center gap-2 pb-1">
+      <div v-if="showUrlInput" class="flex items-center gap-2 pb-2">
         <div class="flex flex-1 items-center gap-2 rounded-full border border-border bg-background px-3 py-1 focus-within:border-primary/50 transition-colors">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-muted-foreground">
             <circle cx="12" cy="12" r="10" />
@@ -201,63 +283,70 @@ const wordCount = computed(() => {
           </svg>
         </button>
       </div>
-      <p v-if="fetchError" class="pb-1 text-[11px] text-red-400">
+      <p v-if="fetchError" class="pb-2 text-[11px] text-red-400">
         {{ fetchError }}
       </p>
-      <p v-else-if="fetchSuccess" class="pb-1 text-[11px] text-emerald-400">
+      <p v-else-if="fetchSuccess" class="pb-2 text-[11px] text-emerald-400">
         Content fetched and loaded.
       </p>
 
-      <!-- Action buttons row -->
-      <div class="flex items-center justify-end gap-2 pt-1 pb-1">
-        <span class="text-[10px] text-muted-foreground/60">{{ sampleIndex + 1 }}/{{ samples.length }}</span>
-        <button
-          class="group flex items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
-          @click="cycleSample"
-        >
-          <svg
-            width="12" height="12" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-            class="transition-transform group-hover:rotate-180 duration-300"
-          >
-            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-            <path d="M21 3v5h-5" />
-          </svg>
-          Try a sample
-        </button>
-        <label
-          class="group flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
-        >
-          <svg
-            width="12" height="12" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" y1="3" x2="12" y2="15" />
-          </svg>
-          Upload .txt
-          <input
-            type="file"
-            accept=".txt,.text,text/plain"
-            class="sr-only"
-            @change="handleFileUpload"
-          >
-        </label>
-        <button
-          class="group flex items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
-          @click="openUrlInput"
-        >
-          <svg
-            width="12" height="12" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-          >
-            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-          </svg>
-          From URL
-        </button>
-      </div>
+      <textarea
+        :value="modelValue"
+        placeholder="Paste or type the text you want to fact-check..."
+        class="w-full resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none font-sans leading-relaxed"
+        rows="3"
+        @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
+      />
     </div>
   </section>
+
+  <!-- Expand Dialog -->
+  <DialogRoot v-model:open="showExpandDialog">
+    <DialogPortal>
+      <DialogOverlay class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+      <DialogContent
+        class="fixed left-1/2 top-1/2 z-50 flex h-[95vh] w-[90vw] max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border border-border bg-card shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]"
+      >
+        <!-- Header -->
+        <div class="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
+          <div class="flex items-center gap-3">
+            <svg
+              width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              class="text-primary"
+            >
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+              <path d="m15 5 4 4" />
+            </svg>
+            <DialogTitle class="text-base font-semibold text-foreground">
+              Input Text
+            </DialogTitle>
+            <span
+              v-if="modelValue"
+              class="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary"
+            >
+              {{ wordCount }} word{{ wordCount !== 1 ? 's' : '' }}
+            </span>
+          </div>
+          <DialogClose
+            class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </DialogClose>
+        </div>
+
+        <!-- Content -->
+        <div class="flex min-h-0 flex-1 p-6">
+          <textarea
+            :value="modelValue"
+            placeholder="Paste or type the text you want to fact-check..."
+            class="h-full w-full resize-none rounded-lg border border-border bg-background p-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 font-sans leading-relaxed"
+            @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
+          />
+        </div>
+      </DialogContent>
+    </DialogPortal>
+  </DialogRoot>
 </template>
