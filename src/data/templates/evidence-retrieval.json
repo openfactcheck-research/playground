@@ -1,0 +1,64 @@
+{
+  "id": "evidence-retrieval",
+  "name": "Evidence Retrieval",
+  "description": "Retrieve evidence before verification for more accurate results",
+  "icon": "search",
+  "category": "basic",
+  "state": {
+    "blocks": {
+      "languageVersion": 0,
+      "blocks": [
+        {
+          "type": "claim_input",
+          "id": "input_1",
+          "x": 50,
+          "y": 50,
+          "next": {
+            "block": {
+              "type": "retriever",
+              "id": "retriever_1",
+              "fields": {
+                "FRAMEWORK": "factcheckgpt"
+              },
+              "inputs": {
+                "MODEL": {
+                  "block": {
+                    "type": "llm",
+                    "id": "llm_1",
+                    "fields": {
+                      "PROVIDER": "openai",
+                      "MODEL": "gpt-4o-mini",
+                      "TEMPERATURE": 0.2
+                    }
+                  }
+                }
+              },
+              "next": {
+                "block": {
+                  "type": "verifier",
+                  "id": "verifier_1",
+                  "fields": {
+                    "FRAMEWORK": "factcheckgpt"
+                  },
+                  "inputs": {
+                    "MODEL": {
+                      "block": {
+                        "type": "llm",
+                        "id": "llm_2",
+                        "fields": {
+                          "PROVIDER": "openai",
+                          "MODEL": "gpt-4o",
+                          "TEMPERATURE": 0.1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

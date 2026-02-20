@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import type { FactCheckResults } from '@/components/FactCheckOutput.vue'
 import type { WorkspaceTab } from '@/components/WorkspaceTabs.vue'
+import type { PipelineTemplate } from '@/data/pipelineTemplates'
 import { nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import BlocklyWorkspace from '@/components/BlocklyWorkspace.vue'
 import CodeOutput from '@/components/CodeOutput.vue'
 import FactCheckOutput from '@/components/FactCheckOutput.vue'
 import Header from '@/components/Header.vue'
+import LoadActionDialog from '@/components/LoadActionDialog.vue'
 import Sidebar from '@/components/Sidebar.vue'
+import TemplatesDialog from '@/components/TemplatesDialog.vue'
 import TextEditor from '@/components/TextEditor.vue'
 import { Button } from '@/components/ui/button'
 import {
@@ -215,6 +218,35 @@ const exportDialogOpen = ref(false)
 const exportFilename = ref('')
 let pendingExportData: object | null = null
 
+// Templates dialog
+const templatesDialogOpen = ref(false)
+
+// Import dialog state
+const importDialogOpen = ref(false)
+const importFileName = ref('')
+let pendingImportData: { workspace: object, name?: string } | null = null
+
+function handleTemplateSelect(template: PipelineTemplate, action: 'new-tab' | 'replace') {
+  if (action === 'new-tab') {
+    // Create new tab with template
+    if (workspaceTabs.value.length >= 5) {
+      return
+    }
+    const newTab: WorkspaceTab = {
+      id: `workspace-${Date.now()}`,
+      name: template.name,
+    }
+    workspaceTabs.value.push(newTab)
+    // Set the template state for the new workspace (watcher persists tabs automatically)
+    localStorage.setItem(`blockly-workspace-state-${newTab.id}`, JSON.stringify(template.state))
+    activeTabId.value = newTab.id
+  }
+  else {
+    // Replace current workspace
+    blocklyRef.value?.setState(template.state as any)
+  }
+}
+
 function handleExport() {
   const state = blocklyRef.value?.getState()
   if (!state)
@@ -276,7 +308,10 @@ function handleImportFile(event: Event) {
         return
       }
 
-      blocklyRef.value?.setState(data.workspace)
+      // Store the parsed data and show action dialog
+      pendingImportData = data
+      importFileName.value = data.name || file.name.replace(/\.json$/i, '')
+      importDialogOpen.value = true
     }
     catch {
       // eslint-disable-next-line no-alert
@@ -287,6 +322,32 @@ function handleImportFile(event: Event) {
 
   // Reset input so same file can be imported again
   input.value = ''
+}
+
+function handleImportAction(action: 'new-tab' | 'replace') {
+  if (!pendingImportData)
+    return
+
+  if (action === 'new-tab') {
+    // Create new tab with imported pipeline
+    if (workspaceTabs.value.length >= 5) {
+      pendingImportData = null
+      return
+    }
+    const newTab: WorkspaceTab = {
+      id: `workspace-${Date.now()}`,
+      name: importFileName.value || 'Imported Pipeline',
+    }
+    workspaceTabs.value.push(newTab)
+    localStorage.setItem(`blockly-workspace-state-${newTab.id}`, JSON.stringify(pendingImportData.workspace))
+    activeTabId.value = newTab.id
+  }
+  else {
+    // Replace current workspace
+    blocklyRef.value?.setState(pendingImportData.workspace as any)
+  }
+
+  pendingImportData = null
 }
 </script>
 
@@ -335,6 +396,20 @@ function handleImportFile(event: Event) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <!-- Templates dialog -->
+    <TemplatesDialog
+      v-model:open="templatesDialogOpen"
+      @select="handleTemplateSelect"
+    />
+
+    <!-- Import action dialog -->
+    <LoadActionDialog
+      v-model:open="importDialogOpen"
+      title="Import Pipeline"
+      :item-name="importFileName"
+      @select="handleImportAction"
+    />
 
     <WelcomeTour ref="welcomeTourRef" />
     <Header
@@ -435,6 +510,21 @@ function handleImportFile(event: Event) {
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
               <span>Import</span>
+            </button>
+            <!-- Templates button -->
+            <button
+              class="flex shrink-0 items-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              title="Browse pipeline templates"
+              aria-label="Pipeline templates"
+              @click.stop="templatesDialogOpen = true"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+              </svg>
+              <span>Templates</span>
             </button>
             <!-- Collapse/expand button -->
             <button

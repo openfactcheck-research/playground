@@ -35,3 +35,9 @@
 .blocklyDropDownDiv .blocklySliderLabel {
   color: light-dark(#212121, #e0e0e0) !important;
 }
+
+/* Toolbox separator line - match dashboard border color */
+.blocklyTreeSeparator {
+  border-color: var(--border) !important;
+  border-radius: var(--radius) !important;
+}

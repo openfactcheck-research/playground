@@ -1,0 +1,64 @@
+{
+  "id": "simple-verification",
+  "name": "Simple Verification",
+  "description": "Basic pipeline: process claim and verify with a single framework",
+  "icon": "check",
+  "category": "basic",
+  "state": {
+    "blocks": {
+      "languageVersion": 0,
+      "blocks": [
+        {
+          "type": "claim_input",
+          "id": "input_1",
+          "x": 50,
+          "y": 50,
+          "next": {
+            "block": {
+              "type": "claim_processor",
+              "id": "processor_1",
+              "fields": {
+                "FRAMEWORK": "factool"
+              },
+              "inputs": {
+                "MODEL": {
+                  "block": {
+                    "type": "llm",
+                    "id": "llm_1",
+                    "fields": {
+                      "PROVIDER": "openai",
+                      "MODEL": "gpt-4o",
+                      "TEMPERATURE": 0.3
+                    }
+                  }
+                }
+              },
+              "next": {
+                "block": {
+                  "type": "verifier",
+                  "id": "verifier_1",
+                  "fields": {
+                    "FRAMEWORK": "factool"
+                  },
+                  "inputs": {
+                    "MODEL": {
+                      "block": {
+                        "type": "llm",
+                        "id": "llm_2",
+                        "fields": {
+                          "PROVIDER": "openai",
+                          "MODEL": "gpt-4o",
+                          "TEMPERATURE": 0.1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
