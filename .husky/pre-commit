@@ -1,8 +1,8 @@
 # Scan staged files for secrets/credentials
 gitleaks protect --staged --verbose
 
-# Type check
-pnpm exec vue-tsc --noEmit
+# Type check (same as build)
+pnpm exec vue-tsc -b --noEmit
 
 # Run linting on staged files
 pnpm exec lint-staged
