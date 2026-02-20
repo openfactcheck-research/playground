@@ -2,7 +2,7 @@
 import * as Blockly from 'blockly/core'
 import * as En from 'blockly/msg/en'
 import { pythonGenerator } from 'blockly/python'
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { registerAllBlocks } from '@/blockly/blocks'
 import { setInputText } from '@/blockly/blocks/claimInput'
 import { createTheme } from '@/blockly/theme'
@@ -12,6 +12,7 @@ import 'blockly/blocks'
 
 const props = defineProps<{
   inputText?: string
+  workspaceId: string
 }>()
 
 const emit = defineEmits<{
@@ -30,7 +31,18 @@ const SUPPORTED_EVENTS: Set<string> = new Set([
   Blockly.Events.BLOCK_MOVE,
 ])
 
-const WORKSPACE_STORAGE_KEY = 'blockly-workspace-state'
+const WORKSPACE_STORAGE_KEY_PREFIX = 'blockly-workspace-state'
+
+// Track current workspace ID for proper save/load
+let currentWorkspaceId = props.workspaceId
+
+// Storage key based on current workspace ID
+function getStorageKey(id: string = currentWorkspaceId): string {
+  return `${WORKSPACE_STORAGE_KEY_PREFIX}-${id}`
+}
+
+// For backward compatibility with computed references
+const storageKey = computed(() => getStorageKey(props.workspaceId))
 
 Blockly.setLocale(En as unknown as Record<string, string>)
 
@@ -61,10 +73,13 @@ function getBlockCount(): number {
 function generateCode(): void {
   if (!_workspace)
     return
+
+  // Always emit block count
+  emit('blockCountChange', getBlockCount())
+
   try {
     const code = pythonGenerator.workspaceToCode(_workspace)
     emit('codeChange', code)
-    emit('blockCountChange', getBlockCount())
   }
   catch {
     // Expected: generator may fail for incomplete blocks (e.g., empty inputs)
@@ -75,7 +90,7 @@ function clearWorkspace(): void {
   if (!_workspace)
     return
   _workspace.clear()
-  localStorage.removeItem(WORKSPACE_STORAGE_KEY)
+  localStorage.removeItem(storageKey.value)
   emit('codeChange', '')
   emit('blockCountChange', 0)
 }
@@ -93,41 +108,84 @@ function resize(): void {
     Blockly.svgResize(_workspace)
 }
 
-function saveWorkspace(): void {
+function saveWorkspace(workspaceId?: string): void {
   if (!_workspace)
     return
   try {
     const state = Blockly.serialization.workspaces.save(_workspace)
-    localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(state))
+    const key = workspaceId ? getStorageKey(workspaceId) : storageKey.value
+    localStorage.setItem(key, JSON.stringify(state))
   }
   catch {
     // Ignore serialization errors
   }
 }
 
-function loadWorkspace(): void {
+function loadWorkspace(workspaceId?: string): void {
   if (!_workspace)
     return
   try {
-    const saved = localStorage.getItem(WORKSPACE_STORAGE_KEY)
+    const key = workspaceId ? getStorageKey(workspaceId) : storageKey.value
+    const saved = localStorage.getItem(key)
+    _workspace.clear()
     if (saved) {
       const state = JSON.parse(saved)
       Blockly.serialization.workspaces.load(state, _workspace)
     }
+    // Clear undo stack after loading - prevents undoing the initial load
+    _workspace.clearUndo()
   }
   catch {
     // Ignore deserialization errors, start fresh
-    localStorage.removeItem(WORKSPACE_STORAGE_KEY)
+    localStorage.removeItem(storageKey.value)
   }
 }
 
-defineExpose({ clearWorkspace, undo, redo, resize, saveWorkspace, loadWorkspace })
+function getState(): object | null {
+  if (!_workspace)
+    return null
+  try {
+    return Blockly.serialization.workspaces.save(_workspace)
+  }
+  catch {
+    return null
+  }
+}
+
+function setState(state: object): void {
+  if (!_workspace)
+    return
+  try {
+    _workspace.clear()
+    Blockly.serialization.workspaces.load(state, _workspace)
+    generateCode()
+  }
+  catch {
+    // Ignore errors
+  }
+}
+
+defineExpose({ clearWorkspace, undo, redo, resize, saveWorkspace, loadWorkspace, getState, setState })
 
 // Watch for input text changes and regenerate code
 watch(() => props.inputText, (newText) => {
   setInputText(newText ?? '')
   generateCode()
 }, { immediate: true })
+
+// Watch for workspace ID changes (tab switching)
+watch(() => props.workspaceId, (newId, oldId) => {
+  if (!_workspace || newId === oldId)
+    return
+  // Save current workspace to the OLD key
+  saveWorkspace(oldId)
+  // Update current workspace ID tracker
+  currentWorkspaceId = newId
+  // Load workspace from the NEW key
+  loadWorkspace(newId)
+  // Generate code for the new workspace
+  generateCode()
+})
 
 function cleanup() {
   if (_themeObserver) {
@@ -214,6 +272,7 @@ onMounted(() => {
   _themeObserver.observe(document.documentElement, { attributes: true })
 
   Blockly.svgResize(_workspace)
+  currentWorkspaceId = props.workspaceId
   loadWorkspace()
   generateCode()
 })

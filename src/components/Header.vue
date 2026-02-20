@@ -9,8 +9,6 @@ defineProps<{
 defineEmits<{
   run: []
   clear: []
-  undo: []
-  redo: []
   logout: []
   help: []
 }>()
@@ -66,31 +64,6 @@ function applyTheme() {
     </div>
 
     <div class="flex items-center gap-2">
-      <button
-        class="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-        title="Undo"
-        aria-label="Undo"
-        @click="$emit('undo')"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 7v6h6" />
-          <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
-        </svg>
-      </button>
-      <button
-        class="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-        title="Redo"
-        aria-label="Redo"
-        @click="$emit('redo')"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 7v6h-6" />
-          <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" />
-        </svg>
-      </button>
-
-      <div class="mx-1 h-5 w-px bg-border" aria-hidden="true" />
-
       <button
         class="flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
         title="Clear workspace"
