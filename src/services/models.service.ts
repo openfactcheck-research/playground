@@ -17,6 +17,9 @@ export const TOP_PROVIDERS = [
   'fireworks',
   'deepseek',
   'xai',
+  'huggingface',
+  'cerebras',
+  'github-models',
 ] as const
 
 export type ProviderId = typeof TOP_PROVIDERS[number]
@@ -140,8 +143,8 @@ export async function getModelOptions(providerId: string): Promise<Array<[string
     return (a.name || '').localeCompare(b.name || '')
   })
 
-  // Take top 20 models to avoid overwhelming dropdown
-  for (const [modelId, model] of models.slice(0, 20)) {
+  // Include all models
+  for (const [modelId, model] of models) {
     options.push([model.name || modelId, modelId])
   }
 
@@ -162,6 +165,32 @@ export const FALLBACK_PROVIDERS: Array<[string, string]> = [
 export const FALLBACK_MODELS: Array<[string, string]> = [
   ['Loading...', 'loading'],
 ]
+
+/**
+ * Get model info including capability flags (reasoning, temperature)
+ */
+export async function getModelInfo(providerId: string, modelId: string): Promise<ModelInfo | null> {
+  const data = await fetchModelsData()
+  const provider = data.providers.get(providerId)
+
+  if (!provider || !provider.models) {
+    return null
+  }
+
+  return provider.models[modelId] || null
+}
+
+/**
+ * Get model info synchronously from cache (returns null if not cached)
+ */
+export function getModelInfoSync(providerId: string, modelId: string): ModelInfo | null {
+  if (!cachedData)
+    return null
+  const provider = cachedData.providers.get(providerId)
+  if (!provider || !provider.models)
+    return null
+  return provider.models[modelId] || null
+}
 
 // Pre-fetch on module load
 fetchModelsData().catch(() => {})

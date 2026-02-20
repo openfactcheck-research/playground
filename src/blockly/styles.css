@@ -41,3 +41,15 @@
   border-color: var(--border) !important;
   border-radius: var(--radius) !important;
 }
+
+/* Prevent scroll propagation from dropdowns to page */
+.blocklyDropDownDiv,
+.blocklyWidgetDiv,
+.blocklyMenu {
+  overscroll-behavior: contain;
+}
+
+.blocklyMenu {
+  overflow-y: auto;
+  max-height: 300px;
+}

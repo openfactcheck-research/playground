@@ -59,7 +59,7 @@ function handleActionSelect(action: 'new-tab' | 'replace') {
 <template>
   <!-- Main templates dialog -->
   <Dialog v-model:open="open">
-    <DialogContent class="sm:max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+    <DialogContent class="sm:max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
       <DialogHeader>
         <DialogTitle>Pipeline Templates</DialogTitle>
         <DialogDescription>
