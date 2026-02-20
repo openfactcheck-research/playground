@@ -443,7 +443,9 @@ function handleImportAction(action: 'new-tab' | 'replace') {
         @change-view="activeView = $event"
       />
       <main class="flex flex-1 flex-col overflow-hidden">
-        <TextEditor v-model="editorText" data-tour="statement" />
+        <div data-tour="statement">
+          <TextEditor v-model="editorText" />
+        </div>
         <!-- Blockly section -->
         <div data-tour="workspace" class="flex flex-col overflow-hidden" :class="workspaceCollapsed ? '' : 'flex-1'">
           <!-- Blockly section header (always visible) -->
