@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { PromptExpandEvent } from '@/blockly/events'
 import type { FactCheckResults } from '@/components/FactCheckOutput.vue'
 import type { WorkspaceTab } from '@/components/WorkspaceTabs.vue'
 import type { PipelineTemplate } from '@/data/pipelineTemplates'
@@ -9,6 +10,7 @@ import CodeOutput from '@/components/CodeOutput.vue'
 import FactCheckOutput from '@/components/FactCheckOutput.vue'
 import Header from '@/components/Header.vue'
 import LoadActionDialog from '@/components/LoadActionDialog.vue'
+import PromptTemplateEditor from '@/components/PromptTemplateEditor.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import TemplatesDialog from '@/components/TemplatesDialog.vue'
 import TextEditor from '@/components/TextEditor.vue'
@@ -41,6 +43,11 @@ const consoleOutput = ref<string[]>([])
 const blocklyRef = ref<InstanceType<typeof BlocklyWorkspace> | null>(null)
 const welcomeTourRef = ref<InstanceType<typeof WelcomeTour> | null>(null)
 const workspaceCollapsed = ref(false)
+
+// Prompt template editor dialog state
+const promptEditorOpen = ref(false)
+const promptEditorBlockId = ref<string | null>(null)
+const promptEditorContent = ref('')
 
 // Multi-workspace tab state - persisted to localStorage
 const TABS_STORAGE_KEY = 'blockly-workspace-tabs'
@@ -216,6 +223,20 @@ function handleClearWorkspace() {
   if (blocklyRef.value) {
     blocklyRef.value.clearWorkspace()
   }
+}
+
+function handlePromptExpand(data: PromptExpandEvent) {
+  promptEditorBlockId.value = data.blockId
+  promptEditorContent.value = data.templateContent
+  promptEditorOpen.value = true
+}
+
+function handlePromptEditorSave() {
+  if (blocklyRef.value && promptEditorBlockId.value) {
+    blocklyRef.value.updatePromptTemplate(promptEditorBlockId.value, promptEditorContent.value)
+  }
+  promptEditorOpen.value = false
+  promptEditorBlockId.value = null
 }
 
 function handleCopy() {
@@ -429,6 +450,29 @@ function handleImportAction(action: 'new-tab' | 'replace') {
       @select="handleImportAction"
     />
 
+    <!-- Prompt template editor dialog -->
+    <Dialog v-model:open="promptEditorOpen">
+      <DialogContent class="flex h-[85vh] max-w-3xl flex-col">
+        <DialogHeader>
+          <DialogTitle>Edit Prompt Template</DialogTitle>
+          <DialogDescription>
+            Edit your prompt template. Use &#123;&#123;variable&#125;&#125; syntax for placeholders.
+          </DialogDescription>
+        </DialogHeader>
+        <div class="flex min-h-0 flex-1 py-4">
+          <PromptTemplateEditor v-model="promptEditorContent" />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="promptEditorOpen = false">
+            Cancel
+          </Button>
+          <Button @click="handlePromptEditorSave">
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     <WelcomeTour ref="welcomeTourRef" />
     <Header
       :active-view="activeView"
@@ -617,6 +661,7 @@ function handleImportAction(action: 'new-tab' | 'replace') {
                 :input-text="editorText"
                 @code-change="onCodeChange"
                 @block-count-change="onBlockCountChange"
+                @prompt-expand="handlePromptExpand"
               />
             </div>
             <CodeOutput

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { PromptExpandEvent, PromptUpdateEvent } from '@/blockly/events'
 import { ZoomToFitControl } from '@blockly/zoom-to-fit'
 import * as Blockly from 'blockly/core'
 import * as En from 'blockly/msg/en'
@@ -6,6 +7,7 @@ import { pythonGenerator } from 'blockly/python'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { registerAllBlocks } from '@/blockly/blocks'
 import { setInputText } from '@/blockly/blocks/claimInput'
+import { blocklyEvents, PROMPT_EXPAND_EVENT, PROMPT_UPDATE_EVENT } from '@/blockly/events'
 import { createTheme } from '@/blockly/theme'
 import { toolboxConfig } from '@/blockly/toolbox'
 import '@/blockly/styles.css'
@@ -19,6 +21,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   codeChange: [code: string]
   blockCountChange: [count: number]
+  promptExpand: [data: PromptExpandEvent]
 }>()
 
 // Register custom blocks before workspace creation
@@ -227,6 +230,18 @@ function setState(state: object): void {
   }
 }
 
+function updatePromptTemplate(blockId: string, newContent: string): void {
+  blocklyEvents.emit<PromptUpdateEvent>(PROMPT_UPDATE_EVENT, {
+    blockId,
+    newContent,
+  })
+  generateCode()
+  saveWorkspace()
+}
+
+// Store unsubscribe function for event listener
+let _unsubscribePromptExpand: (() => void) | null = null
+
 defineExpose({
   clearWorkspace,
   undo,
@@ -240,6 +255,7 @@ defineExpose({
   pasteBlocks,
   hasSelectedBlocks,
   hasClipboardData,
+  updatePromptTemplate,
 })
 
 // Watch for input text changes and regenerate code
@@ -263,6 +279,10 @@ watch(() => props.workspaceId, (newId, oldId) => {
 })
 
 function cleanup() {
+  if (_unsubscribePromptExpand) {
+    _unsubscribePromptExpand()
+    _unsubscribePromptExpand = null
+  }
   if (_themeObserver) {
     _themeObserver.disconnect()
     _themeObserver = null
@@ -354,6 +374,14 @@ onMounted(() => {
   _zoomToFit = new ZoomToFitControl(_workspace)
   _zoomToFit.init()
 
+  // Listen for prompt expand events from blocks
+  _unsubscribePromptExpand = blocklyEvents.on<PromptExpandEvent>(
+    PROMPT_EXPAND_EVENT,
+    (data) => {
+      emit('promptExpand', data)
+    },
+  )
+
   Blockly.svgResize(_workspace)
   currentWorkspaceId = props.workspaceId
   loadWorkspace()
@@ -373,6 +401,7 @@ onBeforeUnmount(() => {
 .blocklyDiv {
   position: absolute;
   inset: 0;
+  z-index: 1;
 }
 
 .blocklyDiv :deep(.blocklySvg) {
@@ -387,6 +416,18 @@ onBeforeUnmount(() => {
 /* Hide toolbox border/line */
 .blocklyDiv :deep(.blocklyToolboxDiv) {
   border-right: none;
+  z-index: 10 !important;
+}
+
+/* Keep all Blockly elements below dialogs (z-50) */
+.blocklyDiv :deep(.blocklyFlyout) {
+  z-index: 10 !important;
+}
+
+.blocklyDiv :deep(.blocklyWidgetDiv),
+.blocklyDiv :deep(.blocklyDropDownDiv),
+.blocklyDiv :deep(.blocklyTooltipDiv) {
+  z-index: 40 !important;
 }
 
 /* Fix Tailwind/Blockly conflict (issue #5840) - respect SVG display="none" */
@@ -418,5 +459,12 @@ onBeforeUnmount(() => {
 .blocklyTreeRowContentContainer {
   display: flex !important;
   align-items: center !important;
+}
+
+/* Keep Blockly overlays below dialogs (z-50) */
+.blocklyWidgetDiv,
+.blocklyDropDownDiv,
+.blocklyTooltipDiv {
+  z-index: 40 !important;
 }
 </style>
