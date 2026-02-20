@@ -16,6 +16,19 @@ resource "aws_cognito_user_pool" "ofc_playground" {
     case_sensitive = false
   }
 
+  # Custom attribute for user preferences (JSON string)
+  schema {
+    name                = "preferences"
+    attribute_data_type = "String"
+    mutable             = true
+    required            = false
+
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 2048
+    }
+  }
+
   # Password policy
   password_policy {
     minimum_length    = 8
@@ -82,6 +95,10 @@ resource "aws_cognito_user_pool_client" "ofc_playground_client" {
     "ALLOW_USER_SRP_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH"
   ]
+
+  # Allow reading and writing custom attributes
+  read_attributes  = ["email", "name", "custom:preferences"]
+  write_attributes = ["email", "name", "custom:preferences"]
 
   # Token validity settings
   access_token_validity  = 1  # 1 hour
