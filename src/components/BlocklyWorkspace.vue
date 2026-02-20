@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ZoomToFitControl } from '@blockly/zoom-to-fit'
 import * as Blockly from 'blockly/core'
 import * as En from 'blockly/msg/en'
 import { pythonGenerator } from 'blockly/python'
@@ -32,6 +33,7 @@ const SUPPORTED_EVENTS: Set<string> = new Set([
 ])
 
 const WORKSPACE_STORAGE_KEY_PREFIX = 'blockly-workspace-state'
+const CLIPBOARD_STORAGE_KEY = 'blockly-blocks-clipboard'
 
 // Track current workspace ID for proper save/load
 let currentWorkspaceId = props.workspaceId
@@ -51,6 +53,7 @@ const blocklyDiv = ref<HTMLElement>()
 // Store workspace outside of Vue reactivity to prevent proxy issues
 // and ensure cleanup survives HMR cycles
 let _workspace: Blockly.WorkspaceSvg | null = null
+let _zoomToFit: ZoomToFitControl | null = null
 let _resizeObserver: ResizeObserver | null = null
 let _themeObserver: MutationObserver | null = null
 
@@ -101,6 +104,65 @@ function undo(): void {
 
 function redo(): void {
   _workspace?.undo(true)
+}
+
+// Copy/paste functionality for cross-tab block sharing
+function copySelectedBlocks(): boolean {
+  if (!_workspace)
+    return false
+
+  const selected = Blockly.getSelected()
+  if (!selected || !(selected instanceof Blockly.BlockSvg))
+    return false
+
+  try {
+    // Serialize the selected block (includes child blocks)
+    const blockState = Blockly.serialization.blocks.save(selected)
+    localStorage.setItem(CLIPBOARD_STORAGE_KEY, JSON.stringify(blockState))
+    return true
+  }
+  catch {
+    return false
+  }
+}
+
+function pasteBlocks(): boolean {
+  if (!_workspace)
+    return false
+
+  try {
+    const clipboardData = localStorage.getItem(CLIPBOARD_STORAGE_KEY)
+    if (!clipboardData)
+      return false
+
+    const blockState = JSON.parse(clipboardData)
+
+    // Offset position slightly so pasted blocks don't overlap originals
+    if (blockState.x !== undefined)
+      blockState.x += 20
+    if (blockState.y !== undefined)
+      blockState.y += 20
+
+    // Append the block to the workspace
+    Blockly.serialization.blocks.append(blockState, _workspace)
+    generateCode()
+    saveWorkspace()
+    return true
+  }
+  catch {
+    return false
+  }
+}
+
+function hasSelectedBlocks(): boolean {
+  if (!_workspace)
+    return false
+  const selected = Blockly.getSelected()
+  return selected instanceof Blockly.BlockSvg
+}
+
+function hasClipboardData(): boolean {
+  return !!localStorage.getItem(CLIPBOARD_STORAGE_KEY)
 }
 
 function resize(): void {
@@ -165,7 +227,20 @@ function setState(state: object): void {
   }
 }
 
-defineExpose({ clearWorkspace, undo, redo, resize, saveWorkspace, loadWorkspace, getState, setState })
+defineExpose({
+  clearWorkspace,
+  undo,
+  redo,
+  resize,
+  saveWorkspace,
+  loadWorkspace,
+  getState,
+  setState,
+  copySelectedBlocks,
+  pasteBlocks,
+  hasSelectedBlocks,
+  hasClipboardData,
+})
 
 // Watch for input text changes and regenerate code
 watch(() => props.inputText, (newText) => {
@@ -195,6 +270,10 @@ function cleanup() {
   if (_resizeObserver) {
     _resizeObserver.disconnect()
     _resizeObserver = null
+  }
+  if (_zoomToFit) {
+    _zoomToFit.dispose()
+    _zoomToFit = null
   }
   if (_workspace) {
     saveWorkspace()
@@ -270,6 +349,10 @@ onMounted(() => {
     }
   })
   _themeObserver.observe(document.documentElement, { attributes: true })
+
+  // Initialize zoom-to-fit control
+  _zoomToFit = new ZoomToFitControl(_workspace)
+  _zoomToFit.init()
 
   Blockly.svgResize(_workspace)
   currentWorkspaceId = props.workspaceId

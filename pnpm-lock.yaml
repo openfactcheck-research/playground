@@ -14,6 +14,9 @@ importers:
       '@blockly/field-slider':
         specifier: ^8.0.8
         version: 8.0.8(blockly@12.4.1)
+      '@blockly/zoom-to-fit':
+        specifier: ^7.0.8
+        version: 7.0.8(blockly@12.4.1)
       '@vueuse/core':
         specifier: ^14.2.1
         version: 14.2.1(vue@3.5.28(typescript@5.9.3))
@@ -377,6 +380,12 @@ packages:
   '@blockly/field-slider@8.0.8':
     resolution: {integrity: sha512-uG/Vq9eS17TvrRZZyvIEbknDcniwmLRVCP8FpgWmet4pwpCNrqERPTxP4/FQXRzbuHb/r+YeGjhRbXY367xfWw==}
     engines: {node: '>=8.0.0'}
+    peerDependencies:
+      blockly: ^12.0.0
+
+  '@blockly/zoom-to-fit@7.0.8':
+    resolution: {integrity: sha512-ut9XlVt4Z0U9D9kvsRaQaRF3VtfEL8IR61ySI+9iQyoN0mpRz+BmwcSe2oTDohKMm1zDZxc1DzBc5l2P9YPlng==}
+    engines: {node: '>=8.17.0'}
     peerDependencies:
       blockly: ^12.0.0
 
@@ -3687,6 +3696,10 @@ snapshots:
       blockly: 12.4.1
 
   '@blockly/field-slider@8.0.8(blockly@12.4.1)':
+    dependencies:
+      blockly: 12.4.1
+
+  '@blockly/zoom-to-fit@7.0.8(blockly@12.4.1)':
     dependencies:
       blockly: 12.4.1
 

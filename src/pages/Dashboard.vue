@@ -212,6 +212,18 @@ function handleRedo() {
   }
 }
 
+function handleCopy() {
+  if (blocklyRef.value) {
+    blocklyRef.value.copySelectedBlocks()
+  }
+}
+
+function handlePaste() {
+  if (blocklyRef.value) {
+    blocklyRef.value.pasteBlocks()
+  }
+}
+
 // Export/Import functionality
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const exportDialogOpen = ref(false)
@@ -479,6 +491,30 @@ function handleImportAction(action: 'new-tab' | 'replace') {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 7v6h-6" />
                 <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" />
+              </svg>
+            </button>
+            <!-- Copy button -->
+            <button
+              class="flex shrink-0 items-center justify-center rounded p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              title="Copy selected block (works across tabs)"
+              aria-label="Copy"
+              @click.stop="handleCopy"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+            </button>
+            <!-- Paste button -->
+            <button
+              class="flex shrink-0 items-center justify-center rounded p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              title="Paste blocks from clipboard"
+              aria-label="Paste"
+              @click.stop="handlePaste"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
               </svg>
             </button>
             <!-- Separator -->
