@@ -3,18 +3,9 @@
  * Imported by BlocklyWorkspace.vue
  */
 
-/* Force black text on pastel blocks */
-.blocklyText {
-  fill: #000 !important;
-}
-
-.blocklyEditableText > text {
-  fill: #000 !important;
-}
-
 /* Field slider dropdown fixes */
 .blocklySliderDiv {
-  background-color: light-dark(#fff, #333) !important;
+  background-color: var(--popover) !important;
 }
 
 .blocklySliderDiv input[type='range'] {
@@ -33,7 +24,7 @@
 }
 
 .blocklyDropDownDiv .blocklySliderLabel {
-  color: light-dark(#212121, #e0e0e0) !important;
+  color: var(--popover-foreground) !important;
 }
 
 /* Toolbox separator line - match dashboard border color */
@@ -52,4 +43,87 @@
 .blocklyMenu {
   overflow-y: auto;
   max-height: 300px;
+}
+
+/* Outfit font for all Blockly-injected text */
+.blocklyText,
+.blocklyEditableText text,
+.blocklyHtmlInput,
+.blocklyDropDownDiv,
+.blocklyWidgetDiv,
+.blocklyTooltipDiv {
+  font-family: var(--font-sans) !important;
+}
+
+/* Toolbox category label styling */
+.blocklyToolboxCategoryLabel {
+  font-family: var(--font-sans) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.blocklyToolboxCategory {
+  display: flex !important;
+  align-items: center !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  margin-bottom: 2px !important;
+  padding: 0 12px 0 0 !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+}
+
+.blocklyToolboxCategory:not(.blocklyToolboxSelected):hover {
+  background-color: oklch(1 0 0 / 6%) !important;
+}
+
+.blocklyToolboxSelected {
+  background-color: oklch(1 0 0 / 10%) !important;
+}
+
+.blocklyTreeRowContentContainer {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding-left: 10px !important;
+}
+
+.blocklyToolbox {
+  padding: 8px 4px !important;
+}
+
+.blocklyTreeSeparator {
+  height: 0 !important;
+  margin: 6px 12px !important;
+  border-bottom: 1px solid oklch(1 0 0 / 8%) !important;
+}
+
+/* Claim input expand icon */
+.claim-expand-icon {
+  opacity: 0.4;
+  transition: opacity 0.15s ease;
+}
+
+.claim-expand-icon:hover {
+  opacity: 0.85;
+}
+
+/* Block text color — black in light mode, inherited (white) in dark mode */
+html:not(.dark) .blocklyText,
+html:not(.dark) .blocklyEditableText text {
+  fill: #000000 !important;
+}
+
+/* Hide scrollbars — panning/dragging still works via move.scrollbars: true */
+.blocklyScrollbarHorizontal,
+.blocklyScrollbarVertical {
+  display: none !important;
+}
+
+/* Keep Blockly overlays below dialogs (z-50) */
+.blocklyWidgetDiv,
+.blocklyDropDownDiv,
+.blocklyTooltipDiv {
+  z-index: 40 !important;
 }

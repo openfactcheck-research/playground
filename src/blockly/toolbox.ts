@@ -1,166 +1,92 @@
+// ---------------------------------------------------------------------------
+// Toolbox configuration for the Blockly workspace.
+// ---------------------------------------------------------------------------
+
+function block(type: string, extra?: object) {
+  return { kind: 'block' as const, type, ...extra }
+}
+
+function sep(gap?: string) {
+  return gap ? { kind: 'sep' as const, gap } : { kind: 'sep' as const }
+}
+
+function category(name: string, categorystyle: string, contents?: object[], custom?: string) {
+  return { kind: 'category' as const, name, categorystyle, ...(custom ? { custom } : { contents }) }
+}
+
+const logicCategory = category('Logic', 'logic_category', [
+  block('controls_if'),
+  block('logic_compare'),
+  block('logic_operation'),
+  block('logic_negate'),
+  block('logic_boolean'),
+  block('logic_null'),
+  block('logic_ternary'),
+])
+
+const loopsCategory = category('Loops', 'loop_category', [
+  block('controls_repeat_ext'),
+  block('controls_whileUntil'),
+  block('controls_for'),
+  block('controls_forEach'),
+  block('controls_flow_statements'),
+])
+
+const mathCategory = category('Math', 'math_category', [
+  block('math_number'),
+  block('math_arithmetic'),
+  block('math_single'),
+  block('math_trig'),
+  block('math_constant'),
+  block('math_number_property'),
+  block('math_round'),
+  block('math_on_list'),
+  block('math_modulo'),
+  block('math_constrain'),
+  block('math_random_int'),
+  block('math_random_float'),
+])
+
+const textCategory = category('Text', 'text_category', [
+  block('text'),
+  block('text_join'),
+  block('text_append'),
+  block('text_length'),
+  block('text_isEmpty'),
+  block('text_indexOf'),
+  block('text_charAt'),
+  block('text_getSubstring'),
+  block('text_changeCase'),
+  block('text_trim'),
+  block('text_print'),
+])
+
+const listsCategory = category('Lists', 'list_category', [
+  block('lists_create_with'),
+  block('lists_repeat'),
+  block('lists_length'),
+  block('lists_isEmpty'),
+  block('lists_indexOf'),
+  block('lists_getIndex'),
+  block('lists_setIndex'),
+  block('lists_getSublist'),
+  block('lists_sort'),
+  block('lists_reverse'),
+])
+
+const variablesCategory = category('Variables', 'variable_category', undefined, 'VARIABLE')
+const functionsCategory = category('Functions', 'procedure_category', undefined, 'PROCEDURE')
+
 export const toolboxConfig = {
   kind: 'categoryToolbox',
   contents: [
-    {
-      kind: 'category',
-      name: 'AI',
-      categorystyle: 'ai_category',
-      contents: [
-        { kind: 'block', type: 'llm' },
-        { kind: 'block', type: 'prompt_template' },
-        { kind: 'block', type: 'agent' },
-      ],
-    },
-    {
-      kind: 'category',
-      name: 'Fact-Checking',
-      categorystyle: 'factcheck_category',
-      contents: [
-        // Pre-assembled pipeline template
-        {
-          kind: 'block',
-          type: 'claim_input',
-          next: {
-            block: {
-              type: 'claim_processor',
-              inputs: {
-                MODEL: {
-                  block: {
-                    type: 'llm',
-                    collapsed: true,
-                  },
-                },
-              },
-              next: {
-                block: {
-                  type: 'retriever',
-                  inputs: {
-                    MODEL: {
-                      block: {
-                        type: 'llm',
-                        collapsed: true,
-                      },
-                    },
-                  },
-                  next: {
-                    block: {
-                      type: 'verifier',
-                      inputs: {
-                        MODEL: {
-                          block: {
-                            type: 'llm',
-                            collapsed: true,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        { kind: 'sep', gap: '24' },
-        // Individual blocks
-        { kind: 'block', type: 'claim_input' },
-        { kind: 'block', type: 'claim_processor' },
-        { kind: 'block', type: 'retriever' },
-        { kind: 'block', type: 'verifier' },
-      ],
-    },
-    { kind: 'sep' },
-    {
-      kind: 'category',
-      name: 'Logic',
-      categorystyle: 'logic_category',
-      contents: [
-        { kind: 'block', type: 'controls_if' },
-        { kind: 'block', type: 'logic_compare' },
-        { kind: 'block', type: 'logic_operation' },
-        { kind: 'block', type: 'logic_negate' },
-        { kind: 'block', type: 'logic_boolean' },
-        { kind: 'block', type: 'logic_null' },
-        { kind: 'block', type: 'logic_ternary' },
-      ],
-    },
-    {
-      kind: 'category',
-      name: 'Loops',
-      categorystyle: 'loop_category',
-      contents: [
-        { kind: 'block', type: 'controls_repeat_ext' },
-        { kind: 'block', type: 'controls_whileUntil' },
-        { kind: 'block', type: 'controls_for' },
-        { kind: 'block', type: 'controls_forEach' },
-        { kind: 'block', type: 'controls_flow_statements' },
-      ],
-    },
-    {
-      kind: 'category',
-      name: 'Math',
-      categorystyle: 'math_category',
-      contents: [
-        { kind: 'block', type: 'math_number' },
-        { kind: 'block', type: 'math_arithmetic' },
-        { kind: 'block', type: 'math_single' },
-        { kind: 'block', type: 'math_trig' },
-        { kind: 'block', type: 'math_constant' },
-        { kind: 'block', type: 'math_number_property' },
-        { kind: 'block', type: 'math_round' },
-        { kind: 'block', type: 'math_on_list' },
-        { kind: 'block', type: 'math_modulo' },
-        { kind: 'block', type: 'math_constrain' },
-        { kind: 'block', type: 'math_random_int' },
-        { kind: 'block', type: 'math_random_float' },
-      ],
-    },
-    {
-      kind: 'category',
-      name: 'Text',
-      categorystyle: 'text_category',
-      contents: [
-        { kind: 'block', type: 'text' },
-        { kind: 'block', type: 'text_join' },
-        { kind: 'block', type: 'text_append' },
-        { kind: 'block', type: 'text_length' },
-        { kind: 'block', type: 'text_isEmpty' },
-        { kind: 'block', type: 'text_indexOf' },
-        { kind: 'block', type: 'text_charAt' },
-        { kind: 'block', type: 'text_getSubstring' },
-        { kind: 'block', type: 'text_changeCase' },
-        { kind: 'block', type: 'text_trim' },
-        { kind: 'block', type: 'text_print' },
-      ],
-    },
-    {
-      kind: 'category',
-      name: 'Lists',
-      categorystyle: 'list_category',
-      contents: [
-        { kind: 'block', type: 'lists_create_with' },
-        { kind: 'block', type: 'lists_repeat' },
-        { kind: 'block', type: 'lists_length' },
-        { kind: 'block', type: 'lists_isEmpty' },
-        { kind: 'block', type: 'lists_indexOf' },
-        { kind: 'block', type: 'lists_getIndex' },
-        { kind: 'block', type: 'lists_setIndex' },
-        { kind: 'block', type: 'lists_getSublist' },
-        { kind: 'block', type: 'lists_sort' },
-        { kind: 'block', type: 'lists_reverse' },
-      ],
-    },
-    { kind: 'sep' },
-    {
-      kind: 'category',
-      name: 'Variables',
-      categorystyle: 'variable_category',
-      custom: 'VARIABLE',
-    },
-    {
-      kind: 'category',
-      name: 'Functions',
-      categorystyle: 'procedure_category',
-      custom: 'PROCEDURE',
-    },
+    logicCategory,
+    loopsCategory,
+    mathCategory,
+    textCategory,
+    listsCategory,
+    sep(),
+    variablesCategory,
+    functionsCategory,
   ],
 }

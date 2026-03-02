@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import VerifyForm from '@/components/VerifyForm.vue'
+import VerifyForm from '@/components/auth/VerifyForm.vue'
 </script>
 
 <template>

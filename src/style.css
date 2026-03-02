@@ -4,6 +4,8 @@
 @custom-variant dark (&:is(.dark *), @media (prefers-color-scheme: dark));
 
 @theme inline {
+  --font-sans: 'Geist', sans-serif;
+  --font-mono: 'Geist Mono', monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -52,36 +54,38 @@
   --brand-teal-light: oklch(0.65 0.1 185);
   --brand-white: oklch(1 0 0); /* #FFFFFF */
 
-  --background: light-dark(oklch(1 0 0), oklch(0.145 0 0));
-  --foreground: light-dark(oklch(0.145 0 0), oklch(0.985 0 0));
-  --card: light-dark(oklch(1 0 0), oklch(0.205 0 0));
-  --card-foreground: light-dark(oklch(0.145 0 0), oklch(0.985 0 0));
-  --popover: light-dark(oklch(1 0 0), oklch(0.205 0 0));
-  --popover-foreground: light-dark(oklch(0.145 0 0), oklch(0.985 0 0));
+  /* Semantic tokens — light-dark(light, dark)
+     Using Tailwind v4 built-in neutral palette */
+  --background: light-dark(white, var(--color-neutral-950));
+  --foreground: light-dark(var(--color-neutral-950), var(--color-neutral-50));
+  --card: light-dark(white, var(--color-neutral-900));
+  --card-foreground: light-dark(var(--color-neutral-950), var(--color-neutral-50));
+  --popover: light-dark(white, var(--color-neutral-900));
+  --popover-foreground: light-dark(var(--color-neutral-950), var(--color-neutral-50));
   --primary: light-dark(var(--brand-teal), var(--brand-teal-light));
-  --primary-foreground: light-dark(oklch(0.985 0 0), oklch(0.145 0 0));
-  --secondary: light-dark(oklch(0.97 0 0), oklch(0.269 0 0));
-  --secondary-foreground: light-dark(oklch(0.205 0 0), oklch(0.985 0 0));
-  --muted: light-dark(oklch(0.97 0 0), oklch(0.269 0 0));
-  --muted-foreground: light-dark(oklch(0.556 0 0), oklch(0.708 0 0));
+  --primary-foreground: light-dark(var(--color-neutral-50), var(--color-neutral-950));
+  --secondary: light-dark(var(--color-neutral-100), var(--color-neutral-800));
+  --secondary-foreground: light-dark(var(--color-neutral-900), var(--color-neutral-50));
+  --muted: light-dark(var(--color-neutral-100), var(--color-neutral-800));
+  --muted-foreground: light-dark(var(--color-neutral-500), var(--color-neutral-400));
   --accent: light-dark(oklch(0.95 0.02 185), oklch(0.25 0.03 185));
   --accent-foreground: light-dark(oklch(0.35 0.07 185), oklch(0.85 0.05 185));
   --destructive: light-dark(oklch(0.577 0.245 27.325), oklch(0.704 0.191 22.216));
-  --border: light-dark(oklch(0.922 0 0), oklch(1 0 0 / 10%));
-  --input: light-dark(oklch(0.922 0 0), oklch(1 0 0 / 15%));
+  --border: light-dark(var(--color-neutral-200), oklch(1 0 0 / 10%));
+  --input: light-dark(var(--color-neutral-200), oklch(1 0 0 / 15%));
   --ring: light-dark(oklch(0.45 0.08 185), oklch(0.55 0.08 185));
   --chart-1: light-dark(oklch(0.646 0.222 41.116), oklch(0.488 0.243 264.376));
   --chart-2: light-dark(oklch(0.6 0.118 184.704), oklch(0.696 0.17 162.48));
   --chart-3: light-dark(oklch(0.398 0.07 227.392), oklch(0.769 0.188 70.08));
   --chart-4: light-dark(oklch(0.828 0.189 84.429), oklch(0.627 0.265 303.9));
   --chart-5: light-dark(oklch(0.769 0.188 70.08), oklch(0.645 0.246 16.439));
-  --sidebar: light-dark(oklch(0.985 0 0), oklch(0.205 0 0));
-  --sidebar-foreground: light-dark(oklch(0.145 0 0), oklch(0.985 0 0));
+  --sidebar: light-dark(var(--color-neutral-50), var(--color-neutral-900));
+  --sidebar-foreground: light-dark(var(--color-neutral-950), var(--color-neutral-50));
   --sidebar-primary: light-dark(var(--brand-teal), var(--brand-teal-light));
-  --sidebar-primary-foreground: light-dark(oklch(0.985 0 0), oklch(0.145 0 0));
+  --sidebar-primary-foreground: light-dark(var(--color-neutral-50), var(--color-neutral-950));
   --sidebar-accent: light-dark(oklch(0.95 0.02 185), oklch(0.25 0.03 185));
   --sidebar-accent-foreground: light-dark(oklch(0.35 0.07 185), oklch(0.85 0.05 185));
-  --sidebar-border: light-dark(oklch(0.922 0 0), oklch(1 0 0 / 10%));
+  --sidebar-border: light-dark(var(--color-neutral-200), oklch(1 0 0 / 10%));
   --sidebar-ring: light-dark(oklch(0.45 0.08 185), oklch(0.55 0.08 185));
 }
 
@@ -97,6 +101,14 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    font-family: 'Geist', sans-serif;
+  }
+  /* Let code/pre inherit font-family so font-mono utility propagates into inner <code> elements */
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: inherit;
   }
   body {
     @apply bg-background text-foreground;
