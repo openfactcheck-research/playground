@@ -82,13 +82,15 @@ onUnmounted(() => {
         <Pencil :size="11" class="shrink-0 opacity-0 group-hover:opacity-60 transition-opacity cursor-pointer text-foreground" @click.stop="startEdit" />
       </span>
     </div>
-    <button
-      v-if="canAdd"
-      class="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-      aria-label="New workspace"
-      @click="emit('addTab')"
-    >
-      <Plus :size="16" />
-    </button>
+    <div class="flex items-center gap-3">
+      <button
+        v-if="canAdd"
+        class="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        aria-label="New workspace"
+        @click="emit('addTab')"
+      >
+        <Plus :size="16" />
+      </button>
+    </div>
   </header>
 </template>

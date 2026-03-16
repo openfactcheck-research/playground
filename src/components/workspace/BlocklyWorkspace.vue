@@ -8,6 +8,7 @@ import { pythonGenerator } from 'blockly/python'
 import { ChevronLeft } from 'lucide-vue-next'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { registerAllBlocks } from '@/blockly/blocks'
+import { setVerbose as setTextInputVerbose, BLOCK_TYPE as TEXT_INPUT_TYPE } from '@/blockly/blocks/textInput'
 import { openPrompt } from '@/blockly/dialogs/urlPromptBridge'
 import { createTheme } from '@/blockly/theme'
 import { toolboxConfig } from '@/blockly/toolbox'
@@ -16,12 +17,14 @@ import BlocklyContextMenu from '@/components/workspace/ContextMenu.vue'
 import { useBlockTooltip } from '@/composables/useBlockTooltip'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { useToolbox } from '@/composables/useToolbox'
+import { useVerboseMode } from '@/composables/useVerboseMode'
 import { useWorkspaceClipboard } from '@/composables/useWorkspaceClipboard'
 import { useWorkspacePersistence } from '@/composables/useWorkspacePersistence'
 import '@/blockly/styles.css'
 import 'blockly/blocks'
 
-const { workspaceId } = defineProps<{
+const props = defineProps<{
+  projectId: string
   workspaceId: string
 }>()
 
@@ -53,7 +56,7 @@ const SUPPORTED_EVENTS = new Set([
 ])
 
 // Track current workspace ID separately (changes on tab switch before prop updates)
-let currentWorkspaceId = workspaceId
+let currentWorkspaceId = props.workspaceId
 
 const blocklyDiv = ref<HTMLElement>()
 let _workspace: Blockly.WorkspaceSvg | null = null
@@ -280,12 +283,13 @@ function cleanup() {
   }
 }
 
-watch(() => workspaceId, (newId, oldId) => {
+watch(() => props.workspaceId, (newId, oldId) => {
   if (!_workspace || newId === oldId)
     return
   saveWorkspace(oldId)
   currentWorkspaceId = newId
   loadWorkspace(newId)
+  applyVerboseToAll()
   generateCode()
 })
 
@@ -510,7 +514,7 @@ onMounted(() => {
   _tooltipCleanup = setupTooltipObserver()
 
   Blockly.svgResize(_workspace)
-  currentWorkspaceId = workspaceId
+  currentWorkspaceId = props.workspaceId
   loadWorkspace()
   generateCode()
 
@@ -523,6 +527,21 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => cleanup())
+
+const { verboseMode } = useVerboseMode(() => props.projectId, () => props.workspaceId)
+
+function applyVerboseToAll() {
+  if (!_workspace)
+    return
+  const verbose = verboseMode.value
+  for (const block of _workspace.getAllBlocks(false)) {
+    if (block.type === TEXT_INPUT_TYPE) {
+      setTextInputVerbose(block, verbose)
+    }
+  }
+}
+
+watch(verboseMode, () => applyVerboseToAll())
 
 defineExpose({
   clearWorkspace,

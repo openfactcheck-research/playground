@@ -1,7 +1,27 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
 import { ClipboardPaste, Copy, Download, LayoutGrid, Redo2, Trash2, Undo2, Upload } from 'lucide-vue-next'
+import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useVerboseMode } from '@/composables/useVerboseMode'
+
+const props = defineProps<{
+  projectId: string
+  workspaceId: string
+}>()
+
+const emit = defineEmits<{
+  undo: []
+  redo: []
+  copy: []
+  paste: []
+  clearWorkspace: []
+  export: []
+  import: []
+  templates: []
+}>()
+
+const { verboseMode } = useVerboseMode(() => props.projectId, () => props.workspaceId)
 
 type EmitName = 'undo' | 'redo' | 'copy' | 'paste' | 'clearWorkspace' | 'export' | 'import' | 'templates'
 
@@ -14,17 +34,6 @@ type ControlButton = {
 }
 
 type ControlItem = ControlButton | { separator: true }
-
-const emit = defineEmits<{
-  undo: []
-  redo: []
-  copy: []
-  paste: []
-  clearWorkspace: []
-  export: []
-  import: []
-  templates: []
-}>()
 
 const controls: ControlItem[] = [
   {
@@ -107,5 +116,10 @@ const controls: ControlItem[] = [
         </TooltipContent>
       </Tooltip>
     </template>
+    <div class="h-5 w-px bg-border" />
+    <label class="flex items-center gap-2 px-1.5 text-xs text-muted-foreground select-none">
+      <Switch v-model="verboseMode" />
+      Full View
+    </label>
   </div>
 </template>

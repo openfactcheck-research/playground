@@ -210,6 +210,7 @@ async function handleLogout() {
         <div class="relative flex-1 overflow-hidden">
           <BlocklyWorkspace
             ref="blocklyRef"
+            :project-id="projectId"
             :workspace-id="activeTabId"
             @code-change="generatedCode = $event; touchWorkspace(projectId, activeTabId)"
             @viewport-change="zoomPercent = $event"
@@ -227,6 +228,8 @@ async function handleLogout() {
             @freeze="blocklyRef?.freezeSelectedBlock()"
           />
           <WorkspaceTopControls
+            :project-id="projectId"
+            :workspace-id="activeTabId"
             @undo="blocklyRef?.undo()"
             @redo="blocklyRef?.redo()"
             @copy="blocklyRef?.copySelectedBlocks()"

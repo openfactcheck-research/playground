@@ -24,6 +24,10 @@ export type ProjectRecord = {
  *   PK:    USER#<userId>#PROJECT#<projectId>#WORKSPACE#<workspaceId>
  *   GS1PK: USER#<userId>#PROJECT#<projectId>
  */
+export type WorkspaceSettings = {
+  verboseMode?: boolean
+}
+
 export type WorkspaceRecord = {
   PK: string
   GS1PK: string
@@ -33,6 +37,7 @@ export type WorkspaceRecord = {
   description: string
   locked: boolean
   sortOrder: number
+  settings: WorkspaceSettings
   createdAt: string
   updatedAt: string
 }
@@ -176,6 +181,7 @@ export function useProjects(userId: () => string) {
       description: '',
       locked: false,
       sortOrder: maxOrder + 1,
+      settings: {},
       createdAt: now,
       updatedAt: now,
     }
@@ -195,7 +201,7 @@ export function useProjects(userId: () => string) {
     }
   }
 
-  function updateWorkspace(projectId: string, workspaceId: string, fields: { name?: string, description?: string, locked?: boolean }): void {
+  function updateWorkspace(projectId: string, workspaceId: string, fields: { name?: string, description?: string, locked?: boolean, settings?: WorkspaceSettings }): void {
     const ws = getWorkspace(projectId, workspaceId)
     if (!ws)
       return
@@ -205,6 +211,8 @@ export function useProjects(userId: () => string) {
       ws.description = fields.description
     if (fields.locked !== undefined)
       ws.locked = fields.locked
+    if (fields.settings !== undefined)
+      ws.settings = { ...ws.settings, ...fields.settings }
     ws.updatedAt = new Date().toISOString()
   }
 
@@ -217,6 +225,7 @@ export function useProjects(userId: () => string) {
       return null
     copy.description = source.description
     copy.locked = source.locked
+    copy.settings = { ...source.settings }
     // Copy Blockly state
     const blocklyState = localStorage.getItem(`blockly-workspace-state-${workspaceId}`)
     if (blocklyState)
