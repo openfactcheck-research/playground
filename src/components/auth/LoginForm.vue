@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/composables/useAuth'
+import { POST_LOGIN_ROUTE } from '@/router'
 
 const router = useRouter()
 const { signIn } = useAuth()
@@ -37,7 +38,7 @@ async function handleSubmit() {
       return
     }
 
-    router.push('/dashboard')
+    router.push(POST_LOGIN_ROUTE)
   }
   catch (error: unknown) {
     // Map Cognito error codes to user-friendly messages

@@ -3,8 +3,12 @@ import { useAuth } from '@/composables/useAuth'
 import DashboardPage from '@/pages/Dashboard.vue'
 import ForgotPasswordPage from '@/pages/ForgotPassword.vue'
 import LoginPage from '@/pages/Login.vue'
+import ProjectsPage from '@/pages/Projects.vue'
 import SignupPage from '@/pages/Signup.vue'
 import VerifyPage from '@/pages/Verify.vue'
+import WelcomePage from '@/pages/Welcome.vue'
+
+export const POST_LOGIN_ROUTE = { name: 'projects' } as const
 
 const router = createRouter({
   history: createWebHistory(),
@@ -34,7 +38,19 @@ const router = createRouter({
       component: ForgotPasswordPage,
     },
     {
-      path: '/dashboard',
+      path: '/welcome',
+      name: 'welcome',
+      component: WelcomePage,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/projects',
+      name: 'projects',
+      component: ProjectsPage,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/dashboard/:projectId',
       name: 'dashboard',
       component: DashboardPage,
       meta: { requiresAuth: true },
@@ -64,7 +80,7 @@ router.beforeEach(async (to) => {
   }
 
   if ((to.name === 'login' || to.name === 'signup' || to.name === 'forgot-password') && isAuthenticated.value) {
-    return { name: 'dashboard' }
+    return POST_LOGIN_ROUTE
   }
 })
 

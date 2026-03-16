@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { SelectedBlockInfo } from '@/components/workspace/BlocklyWorkspace.vue'
 import type { InspectorPanel } from '@/components/workspace/Inspector.vue'
-import { ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import type { WorkspaceTab } from '@/components/workspace/Tabs.vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import Header from '@/components/Header.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import WelcomeTour from '@/components/WelcomeTour.vue'
@@ -14,11 +15,63 @@ import WorkspaceInspector from '@/components/workspace/Inspector.vue'
 import WorkspaceTabs from '@/components/workspace/Tabs.vue'
 import WorkspaceTopControls from '@/components/workspace/TopControls.vue'
 import { useAuth } from '@/composables/useAuth'
-import { useWorkspaceTabs } from '@/composables/useWorkspaceTabs'
+import { useProjects } from '@/composables/useProjects'
 
+const route = useRoute()
 const router = useRouter()
-const { signOut } = useAuth()
-const { tabs: workspaceTabs, activeTabId, canAddTab, selectTab, addTab, closeTab, renameTab } = useWorkspaceTabs()
+const { user, signOut } = useAuth()
+const { getProject, getWorkspaces, getWorkspace, createWorkspace, renameProject, renameWorkspace, deleteWorkspace, canAddWorkspace, touchWorkspace, reorderWorkspaces } = useProjects(
+  () => user.value?.userId ?? 'anonymous',
+)
+
+const projectId = computed(() => route.params.projectId as string)
+const initialWs = route.query.ws as string | undefined
+
+// -- Tabs backed by composable workspaces --
+const workspaces = computed(() => getWorkspaces(projectId.value))
+
+const tabs = computed<WorkspaceTab[]>(() =>
+  workspaces.value.map(ws => ({ id: ws.id, name: ws.name })),
+)
+
+const activeTabId = ref(
+  (initialWs && workspaces.value.find(w => w.id === initialWs) ? initialWs : workspaces.value[0]?.id) ?? '',
+)
+
+// Keep activeTabId in sync if workspaces change (e.g. deletion)
+watch(workspaces, (ws) => {
+  if (ws.length && !ws.find(w => w.id === activeTabId.value)) {
+    activeTabId.value = ws[0]!.id
+  }
+}, { flush: 'post' })
+
+const project = computed(() => getProject(projectId.value))
+const activeWorkspace = computed(() => getWorkspace(projectId.value, activeTabId.value))
+
+function handleAddTab() {
+  const ws = createWorkspace(projectId.value, 'Untitled Workspace')
+  if (ws)
+    activeTabId.value = ws.id
+}
+
+function handleCloseTab(id: string) {
+  if (workspaces.value.length <= 1)
+    return // don't close last tab
+  const idx = workspaces.value.findIndex(w => w.id === id)
+  if (activeTabId.value === id) {
+    const next = workspaces.value[idx === 0 ? 1 : idx - 1]!
+    activeTabId.value = next.id
+  }
+  deleteWorkspace(projectId.value, id)
+}
+
+function handleRenameTab(id: string, name: string) {
+  renameWorkspace(projectId.value, id, name)
+}
+
+function handleReorderTabs(orderedIds: string[]) {
+  reorderWorkspaces(projectId.value, orderedIds)
+}
 
 const blocklyRef = ref<InstanceType<typeof BlocklyWorkspace> | null>(null)
 const welcomeTourRef = ref<InstanceType<typeof WelcomeTour> | null>(null)
@@ -47,14 +100,14 @@ function handleExport() {
   const state = blocklyRef.value?.getState()
   if (!state)
     return
-  const activeTab = workspaceTabs.value.find(t => t.id === activeTabId.value)
+  const name = activeWorkspace.value?.name || 'Pipeline'
   pendingExportData = {
     version: 1,
-    name: activeTab?.name || 'Pipeline',
+    name,
     exportedAt: new Date().toISOString(),
     workspace: state,
   }
-  exportFilename.value = (activeTab?.name || 'pipeline').replace(/\s+/g, '-').toLowerCase()
+  exportFilename.value = name.replace(/\s+/g, '-').toLowerCase()
   exportDialogOpen.value = true
 }
 
@@ -107,22 +160,10 @@ function handleImportFile(event: Event) {
   input.value = ''
 }
 
-function handleImportAction(action: 'new-tab' | 'replace') {
+function handleImportAction(_action: 'new-tab' | 'replace') {
   if (!pendingImportData)
     return
-  if (action === 'new-tab') {
-    if (!canAddTab()) {
-      pendingImportData = null
-      return
-    }
-    const newTab = { id: `workspace-${Date.now()}`, name: importFileName.value || 'Imported Pipeline' }
-    workspaceTabs.value.push(newTab)
-    localStorage.setItem(`blockly-workspace-state-${newTab.id}`, JSON.stringify(pendingImportData.workspace))
-    activeTabId.value = newTab.id
-  }
-  else {
-    blocklyRef.value?.setState(pendingImportData.workspace as any)
-  }
+  blocklyRef.value?.setState(pendingImportData.workspace as any)
   pendingImportData = null
 }
 
@@ -145,7 +186,16 @@ async function handleLogout() {
     <DialogImport v-model:open="importDialogOpen" title="Import Pipeline" :item-name="importFileName" @select="handleImportAction" />
 
     <WelcomeTour ref="welcomeTourRef" />
-    <Header :active-view="activeView" :can-add="canAddTab()" @add-tab="addTab" />
+    <Header :active-view="activeView" :can-add="canAddWorkspace(projectId)" :project-name="project?.name" @add-tab="handleAddTab" @rename-project="renameProject(projectId, $event)" />
+    <WorkspaceTabs
+      v-if="tabs.length > 1"
+      :tabs="tabs"
+      :active-tab-id="activeTabId"
+      @select="activeTabId = $event"
+      @close="handleCloseTab"
+      @rename="handleRenameTab"
+      @reorder="handleReorderTabs"
+    />
     <div class="flex flex-1 overflow-hidden">
       <Sidebar
         :active-view="activeView"
@@ -154,32 +204,11 @@ async function handleLogout() {
         @help="welcomeTourRef?.show()"
       />
       <main class="flex flex-1 flex-col overflow-hidden">
-        <WorkspaceTabs
-          v-if="workspaceTabs.length > 1"
-          :tabs="workspaceTabs"
-          :active-tab-id="activeTabId"
-          @select="selectTab"
-          @close="closeTab"
-          @rename="renameTab"
-        />
-
-        <div v-if="workspaceTabs.length === 0" class="flex flex-1 items-center justify-center">
-          <button
-            class="flex items-center gap-2 rounded-lg border border-dashed border-border px-5 py-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-            @click="addTab"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            New workspace
-          </button>
-        </div>
-
-        <div v-else class="relative flex-1 overflow-hidden">
+        <div class="relative flex-1 overflow-hidden">
           <BlocklyWorkspace
             ref="blocklyRef"
             :workspace-id="activeTabId"
-            @code-change="generatedCode = $event"
+            @code-change="generatedCode = $event; touchWorkspace(projectId, activeTabId)"
             @viewport-change="zoomPercent = $event"
             @trash-change="trashHasContents = $event"
             @block-select="selectedBlockInfo = $event"
