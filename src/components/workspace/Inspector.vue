@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type BlocklyWorkspace from './BlocklyWorkspace.vue'
 import type { SelectedBlockInfo } from './BlocklyWorkspace.vue'
 import { Code2, Puzzle } from 'lucide-vue-next'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -11,6 +12,7 @@ defineProps<{
   code: string
   selectedBlock: SelectedBlockInfo | null
   highlightCode?: string
+  blocklyRef?: InstanceType<typeof BlocklyWorkspace> | null
 }>()
 
 const emit = defineEmits<{
@@ -37,7 +39,7 @@ function togglePanel(panel: InspectorPanel) {
         <TooltipTrigger as-child>
           <button
             class="flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
-            :class="activePanel === 'controls' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'"
+            :class="activePanel === 'controls' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'"
             @click="togglePanel('controls')"
           >
             <Puzzle :size="16" />
@@ -52,7 +54,7 @@ function togglePanel(panel: InspectorPanel) {
         <TooltipTrigger as-child>
           <button
             class="flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
-            :class="activePanel === 'code' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'"
+            :class="activePanel === 'code' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'"
             @click="togglePanel('code')"
           >
             <Code2 :size="16" />
@@ -70,6 +72,7 @@ function togglePanel(panel: InspectorPanel) {
         v-if="activePanel === 'controls'"
         class="absolute right-14 top-16 bottom-20"
         :selected-block="selectedBlock"
+        :blockly-ref="blocklyRef"
         @freeze="emit('freeze')"
       />
     </Transition>

@@ -4,6 +4,8 @@ import type { InspectorPanel } from '@/components/workspace/Inspector.vue'
 import type { WorkspaceTab } from '@/components/workspace/Tabs.vue'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import DialogUrlPrompt from '@/blockly/dialogs/URLPrompt.vue'
+import { promptOpen } from '@/blockly/dialogs/urlPromptBridge'
 import Header from '@/components/Header.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import WelcomeTour from '@/components/WelcomeTour.vue'
@@ -184,6 +186,7 @@ async function handleLogout() {
 
     <DialogExport v-model:open="exportDialogOpen" v-model:filename="exportFilename" @confirm="confirmExport" />
     <DialogImport v-model:open="importDialogOpen" title="Import Pipeline" :item-name="importFileName" @select="handleImportAction" />
+    <DialogUrlPrompt v-model:open="promptOpen" />
 
     <WelcomeTour ref="welcomeTourRef" />
     <Header :active-view="activeView" :can-add="canAddWorkspace(projectId)" :project-name="project?.name" @add-tab="handleAddTab" @rename-project="renameProject(projectId, $event)" />
@@ -220,6 +223,7 @@ async function handleLogout() {
             :code="generatedCode"
             :selected-block="selectedBlockInfo"
             :highlight-code="blockCodeHighlight ?? undefined"
+            :blockly-ref="blocklyRef"
             @freeze="blocklyRef?.freezeSelectedBlock()"
           />
           <WorkspaceTopControls

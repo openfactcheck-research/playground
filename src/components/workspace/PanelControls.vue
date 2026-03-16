@@ -1,14 +1,24 @@
 <script setup lang="ts">
+import type BlocklyWorkspace from './BlocklyWorkspace.vue'
 import type { SelectedBlockInfo } from './BlocklyWorkspace.vue'
 import { Lock, Puzzle, Snowflake } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import TextInputControls from './controls/TextInputControls.vue'
 
-const { selectedBlock } = defineProps<{
+const props = defineProps<{
   selectedBlock: SelectedBlockInfo | null
+  blocklyRef?: InstanceType<typeof BlocklyWorkspace> | null
 }>()
 
 const emit = defineEmits<{
   freeze: []
 }>()
+
+const resolvedBlock = computed(() => {
+  if (!props.selectedBlock || !props.blocklyRef)
+    return null
+  return props.blocklyRef.getBlockById(props.selectedBlock.id)
+})
 
 function formatBlockType(type: string): string {
   return type
@@ -16,13 +26,31 @@ function formatBlockType(type: string): string {
     .replace(/_/g, ' ')
     .replace(/\b\w/g, c => c.toUpperCase())
 }
+
+const panelEl = ref<HTMLElement>()
+
+// Prevent Blockly's ShortcutRegistry from processing keyboard events
+// (e.g. Delete/Backspace) while focus is inside this panel.
+function stopKeyEvents(e: Event) {
+  if (panelEl.value?.contains(e.target as Node))
+    e.stopImmediatePropagation()
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', stopKeyEvents, true)
+  document.addEventListener('keyup', stopKeyEvents, true)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', stopKeyEvents, true)
+  document.removeEventListener('keyup', stopKeyEvents, true)
+})
 </script>
 
 <template>
   <div
+    ref="panelEl"
     class="pointer-events-auto w-[33vw] flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-lg"
     @pointerdown.stop
-    @mousedown.prevent
   >
     <!-- Header -->
     <div class="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3">
@@ -32,13 +60,19 @@ function formatBlockType(type: string): string {
 
     <!-- Content -->
     <div class="flex-1 min-h-0 overflow-auto p-4 flex flex-col">
-      <div v-if="selectedBlock">
+      <div v-if="selectedBlock" class="flex flex-1 flex-col">
         <p class="mb-0.5 text-[11px] text-muted-foreground/70">
           Block Type
         </p>
-        <p class="text-sm font-medium text-foreground">
+        <p class="mb-4 text-sm font-medium text-foreground">
           {{ formatBlockType(selectedBlock.blockType) }}
         </p>
+
+        <!-- Block-specific controls -->
+        <TextInputControls
+          v-if="selectedBlock.blockType === 'text_input' && resolvedBlock"
+          :block="resolvedBlock"
+        />
       </div>
 
       <div v-else class="flex-1 flex flex-col items-center justify-center text-center">
@@ -53,7 +87,7 @@ function formatBlockType(type: string): string {
     <div v-if="selectedBlock" class="shrink-0 border-t border-border px-3 py-2">
       <button
         class="flex h-7 w-full items-center justify-center gap-1.5 rounded-md bg-secondary text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
-        :class="selectedBlock.frozen ? 'text-blue-400' : ''"
+        :class="selectedBlock.frozen ? 'text-primary' : ''"
         @click="emit('freeze')"
       >
         <!-- Snowflake icon when frozen -->

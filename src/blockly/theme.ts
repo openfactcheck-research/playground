@@ -1,26 +1,14 @@
 // ---------------------------------------------------------------------------
 // Blockly theme definitions — dark and light.
-//
-// Structure:
-//   1. Full Tailwind color palette (all 23 colors × 11 shades)
-//   2. Hex color utilities (darken / lighten)
-//   3. Active block palettes (reference specific shades from TW)
-//   4. Block style builder
-//   5. Category → color map (single source of truth)
-//   6. Style object builders (derived from the map)
-//   7. Theme factory functions (exported)
 // ---------------------------------------------------------------------------
 
 import * as Blockly from 'blockly/core'
 
 // ---------------------------------------------------------------------------
-// Full Tailwind color palette — all 23 colors, all 11 shades (50–950).
-// Source: tailwindcss.com/docs/colors (hex equivalents of the v4 OKLCH values).
-// Pick any shade when defining PALETTE_DARK / PALETTE_LIGHT below.
+// Full Tailwind color palette — all 23 colors × 11 shades (50–950).
 // ---------------------------------------------------------------------------
 
 const TW = {
-  // --- Reds / Warm ---
   red: {
     50: '#fef2f2',
     100: '#fee2e2',
@@ -73,7 +61,6 @@ const TW = {
     900: '#713f12',
     950: '#422006',
   },
-  // --- Greens ---
   lime: {
     50: '#f7fee7',
     100: '#ecfccb',
@@ -126,7 +113,6 @@ const TW = {
     900: '#134e4a',
     950: '#042f2e',
   },
-  // --- Blues ---
   cyan: {
     50: '#ecfeff',
     100: '#cffafe',
@@ -179,7 +165,6 @@ const TW = {
     900: '#312e81',
     950: '#1e1b4b',
   },
-  // --- Purples / Pinks ---
   violet: {
     50: '#f5f3ff',
     100: '#ede9fe',
@@ -245,7 +230,6 @@ const TW = {
     900: '#881337',
     950: '#4c0519',
   },
-  // --- Neutrals ---
   slate: {
     50: '#f8fafc',
     100: '#f1f5f9',
@@ -314,115 +298,44 @@ const TW = {
 }
 
 // ---------------------------------------------------------------------------
-// Palette type — shared by both dark and light palettes.
+// Palette type and active block palettes.
 // ---------------------------------------------------------------------------
 
-type Palette = {
-  violet: string
-  orange: string
-  sky: string
-  blue: string
-  green: string
-  amber: string
-  pink: string
-  purple: string
-  emerald: string
-  teal: string
-  slate: string
+type Palette = Record<keyof typeof TW, string>
+
+const TW_KEYS = Object.keys(TW) as (keyof typeof TW)[]
+
+function buildPalette(fn: (color: keyof typeof TW) => string): Palette {
+  return Object.fromEntries(TW_KEYS.map(k => [k, fn(k)])) as Palette
 }
 
-// ---------------------------------------------------------------------------
-// Active block palettes — pick one shade per hue for each theme.
-// Swap a shade number here to restyle that category across both block and
-// category styles simultaneously.
-// ---------------------------------------------------------------------------
+const PALETTE_DARK_SUBTLE = buildPalette(c => mix(TW[c][600], TW.neutral[900], 0.30))
+const PALETTE_DARK_SUBTLE_OUTLINE = buildPalette(c => mix(mix(TW[c][800], TW[c][900], 0.70), TW.neutral[800], 0.24))
+const PALETTE_LIGHT = buildPalette(c => TW[c][200])
+const PALETTE_LIGHT_OUTLINE = buildPalette(c => TW[c][500])
 
-// Subtle dark palette — fill: TW-600 blended 30% toward neutral-900.
-// Outline: TW-870 (mix of 800/900 at 0.7) blended 24% toward neutral-800.
-const PALETTE_DARK_SUBTLE: Palette = {
-  violet: mix(TW.violet[600], TW.neutral[900], 0.30),
-  orange: mix(TW.orange[600], TW.neutral[900], 0.30),
-  sky: mix(TW.sky[600], TW.neutral[900], 0.30),
-  blue: mix(TW.blue[600], TW.neutral[900], 0.30),
-  green: mix(TW.green[600], TW.neutral[900], 0.30),
-  amber: mix(TW.amber[600], TW.neutral[900], 0.30),
-  pink: mix(TW.pink[600], TW.neutral[900], 0.30),
-  purple: mix(TW.purple[600], TW.neutral[900], 0.30),
-  emerald: mix(TW.emerald[600], TW.neutral[900], 0.30),
-  teal: mix(TW.teal[600], TW.neutral[900], 0.30),
-  slate: mix(TW.slate[600], TW.neutral[900], 0.30),
-}
-
-const PALETTE_DARK_SUBTLE_OUTLINE: Palette = {
-  violet: mix(mix(TW.violet[800], TW.violet[900], 0.70), TW.neutral[800], 0.24),
-  orange: mix(mix(TW.orange[800], TW.orange[900], 0.70), TW.neutral[800], 0.24),
-  sky: mix(mix(TW.sky[800], TW.sky[900], 0.70), TW.neutral[800], 0.24),
-  blue: mix(mix(TW.blue[800], TW.blue[900], 0.70), TW.neutral[800], 0.24),
-  green: mix(mix(TW.green[800], TW.green[900], 0.70), TW.neutral[800], 0.24),
-  amber: mix(mix(TW.amber[800], TW.amber[900], 0.70), TW.neutral[800], 0.24),
-  pink: mix(mix(TW.pink[800], TW.pink[900], 0.70), TW.neutral[800], 0.24),
-  purple: mix(mix(TW.purple[800], TW.purple[900], 0.70), TW.neutral[800], 0.24),
-  emerald: mix(mix(TW.emerald[800], TW.emerald[900], 0.70), TW.neutral[800], 0.24),
-  teal: mix(mix(TW.teal[800], TW.teal[900], 0.70), TW.neutral[800], 0.24),
-  slate: mix(mix(TW.slate[800], TW.slate[900], 0.70), TW.neutral[800], 0.24),
-}
-
-const PALETTE_LIGHT: Palette = {
-  violet: TW.violet[200],
-  orange: TW.orange[200],
-  sky: TW.sky[200],
-  blue: TW.blue[200],
-  green: TW.green[200],
-  amber: TW.amber[200],
-  pink: TW.pink[200],
-  purple: TW.purple[200],
-  emerald: TW.emerald[200],
-  teal: TW.teal[200],
-  slate: TW.slate[200],
-}
-
-// Outline color for light mode blocks.
-const PALETTE_LIGHT_OUTLINE: Palette = {
-  violet: TW.violet[500],
-  orange: TW.orange[500],
-  sky: TW.sky[500],
-  blue: TW.blue[500],
-  green: TW.green[500],
-  amber: TW.amber[500],
-  pink: TW.pink[500],
-  purple: TW.purple[500],
-  emerald: TW.emerald[500],
-  teal: TW.teal[500],
-  slate: TW.slate[500],
-}
-
-// Export dark palette as PALETTE for block files that call this.setColour(PALETTE.violet).
 export { PALETTE_DARK_SUBTLE as PALETTE }
 
 // ---------------------------------------------------------------------------
-// Hex color utilities
+// Hex color utilities.
 // ---------------------------------------------------------------------------
 
-/** Unpacks a `#rrggbb` hex string into an [r, g, b] tuple (0–255 each). */
 function hexToRgb(hex: string): [number, number, number] {
   const num = Number.parseInt(hex.slice(1), 16)
   return [(num >> 16) & 0xFF, (num >> 8) & 0xFF, num & 0xFF]
 }
 
-/** Packs three 0–255 channel values back into a `#rrggbb` hex string. */
 function rgbToHex(r: number, g: number, b: number): string {
   const ch = (n: number) => Math.round(n).toString(16).padStart(2, '0')
   return `#${ch(r)}${ch(g)}${ch(b)}`
 }
 
-/** Linearly interpolates between two hex colors. `t=0` returns `a`, `t=1` returns `b`. */
 function mix(a: string, b: string, t: number): string {
   const [r1, g1, b1] = hexToRgb(a)
   const [r2, g2, b2] = hexToRgb(b)
   return rgbToHex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t)
 }
 
-/** Returns a darker version of `hex` by scaling each channel toward 0 by `percent` (0–1). */
 function darken(hex: string, percent: number): string {
   const [r, g, b] = hexToRgb(hex)
   return rgbToHex(
@@ -432,7 +345,6 @@ function darken(hex: string, percent: number): string {
   )
 }
 
-/** Returns a lighter version of `hex` by scaling each channel toward 255 by `percent` (0–1). */
 function lighten(hex: string, percent: number): string {
   const [r, g, b] = hexToRgb(hex)
   return rgbToHex(
@@ -443,20 +355,9 @@ function lighten(hex: string, percent: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Block style builder
-//
-// Blockly uses three color levels per block:
-//   primary   — main block fill
-//   secondary — input socket / value hole fill
-//   tertiary  — block border / shadow
+// Block style builder — primary (fill), secondary (socket), tertiary (border).
 // ---------------------------------------------------------------------------
 
-/**
- * Builds a Blockly block style from a fill color and an optional outline color.
- *   colourPrimary   — main block fill
- *   colourSecondary — input socket fill (auto-derived from fill)
- *   colourTertiary  — block border / outline (defaults to darkened fill if not provided)
- */
 function blockStyle(fill: string, isDark: boolean, outline?: string) {
   return {
     colourPrimary: fill,
@@ -466,22 +367,12 @@ function blockStyle(fill: string, isDark: boolean, outline?: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Category → color map  (single source of truth)
-//
-// Keys are bare category names; they are expanded to `{key}_blocks` and
-// `{key}_category` when building Blockly's blockStyles / categoryStyles.
+// Category → color map. Keys expand to `{key}_blocks` and `{key}_category`.
 // ---------------------------------------------------------------------------
 
 type PaletteKey = keyof Palette
 
-/**
- * Maps each Blockly category/block-style key to a palette color name.
- * Edit here to remap a category — both blockStyles and categoryStyles
- * are derived automatically from this map.
- */
 const CATEGORY_COLOUR_MAP: Record<string, PaletteKey> = {
-  ai: 'violet',
-  factcheck: 'orange',
   io: 'sky',
   logic: 'blue',
   loop: 'green',
@@ -490,16 +381,12 @@ const CATEGORY_COLOUR_MAP: Record<string, PaletteKey> = {
   list: 'purple',
   variable: 'emerald',
   procedure: 'teal',
-  files: 'slate',
-  datasource: 'sky',
-  llmops: 'violet',
 }
 
 // ---------------------------------------------------------------------------
-// Style object builders — derived from CATEGORY_COLOUR_MAP + a palette
+// Style object builders.
 // ---------------------------------------------------------------------------
 
-/** Builds the `blockStyles` object for a theme from the given palette, with an optional outline palette. */
 function buildBlockStyles(palette: Palette, isDark: boolean, outlinePalette?: Palette) {
   return Object.fromEntries(
     Object.entries(CATEGORY_COLOUR_MAP).map(([key, colour]) => [
@@ -509,7 +396,6 @@ function buildBlockStyles(palette: Palette, isDark: boolean, outlinePalette?: Pa
   )
 }
 
-/** Builds the `categoryStyles` object for a theme from the given palette. */
 function buildCategoryStyles(palette: Palette) {
   return Object.fromEntries(
     Object.entries(CATEGORY_COLOUR_MAP).map(([key, colour]) => [
@@ -520,13 +406,7 @@ function buildCategoryStyles(palette: Palette) {
 }
 
 // ---------------------------------------------------------------------------
-// Theme factories
-//
-// Component styles (workspace, toolbox, flyout) use neutral grays — kept
-// intentionally separate from the block palette so chrome stays neutral.
-//
-// `Date.now()` is appended to theme names because Blockly caches themes by
-// name — a unique suffix forces re-registration on every call (e.g. HMR).
+// Theme factories. Date.now() suffix forces re-registration (Blockly caches by name).
 // ---------------------------------------------------------------------------
 
 export function createDarkTheme(): Blockly.Theme {
@@ -571,7 +451,6 @@ export function createLightTheme(): Blockly.Theme {
   })
 }
 
-/** Convenience wrapper — picks dark or light theme based on a boolean flag. */
 export function createTheme(isDark: boolean): Blockly.Theme {
   return isDark ? createDarkTheme() : createLightTheme()
 }

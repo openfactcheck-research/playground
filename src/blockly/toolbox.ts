@@ -76,10 +76,15 @@ const listsCategory = category('Lists', 'list_category', [
 
 const variablesCategory = category('Variables', 'variable_category', undefined, 'VARIABLE')
 const functionsCategory = category('Functions', 'procedure_category', undefined, 'PROCEDURE')
+const ioCategory = category('Input & Output', 'io_category', [
+  block('text_input'),
+])
 
 export const toolboxConfig = {
   kind: 'categoryToolbox',
   contents: [
+    ioCategory,
+    sep(),
     logicCategory,
     loopsCategory,
     mathCategory,

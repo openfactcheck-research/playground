@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Plus } from 'lucide-vue-next'
+import { Pencil, Plus } from 'lucide-vue-next'
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
@@ -21,7 +21,10 @@ const inputRef = ref<HTMLInputElement | null>(null)
 function startEdit() {
   editName.value = props.projectName ?? ''
   editing.value = true
-  nextTick(() => inputRef.value?.select())
+  nextTick(() => {
+    inputRef.value?.focus()
+    inputRef.value?.select()
+  })
 }
 
 function finishEdit() {
@@ -65,17 +68,18 @@ onUnmounted(() => {
         v-if="editing"
         ref="inputRef"
         v-model="editName"
-        class="h-7 w-48 rounded-md border border-border bg-secondary px-2 text-sm font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
+        class="border-none bg-transparent text-sm font-medium text-foreground outline-none"
         @blur="finishEdit"
         @keydown.enter="finishEdit"
         @keydown.escape="editing = false"
       >
       <span
         v-else-if="projectName"
-        class="cursor-default text-sm font-medium text-foreground"
+        class="group flex cursor-default items-center gap-1.5 text-sm font-medium text-foreground"
         @dblclick="startEdit"
       >
         {{ projectName }}
+        <Pencil :size="11" class="shrink-0 opacity-0 group-hover:opacity-60 transition-opacity cursor-pointer text-foreground" @click.stop="startEdit" />
       </span>
     </div>
     <button

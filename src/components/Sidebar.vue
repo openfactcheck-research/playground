@@ -71,7 +71,7 @@ const bottomNavItems = [
         :key="item.id"
         class="relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors"
         :class="activeView === item.id
-          ? 'bg-secondary text-foreground'
+          ? 'bg-primary/10 text-primary'
           : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'"
         :aria-label="item.label"
         @mouseenter="hoveredId = item.id"
@@ -123,7 +123,7 @@ const bottomNavItems = [
         :key="item.id"
         class="relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors"
         :class="activeView === item.id
-          ? 'bg-secondary text-foreground'
+          ? 'bg-primary/10 text-primary'
           : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'"
         :aria-label="item.label"
         @mouseenter="hoveredId = item.id"

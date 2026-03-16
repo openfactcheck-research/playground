@@ -2,11 +2,13 @@
 import type { ToolbarAction } from '@/components/workspace/BlockToolbar.vue'
 import { ZoomToFitControl } from '@blockly/zoom-to-fit'
 import * as Blockly from 'blockly/core'
+import { getFocusManager } from 'blockly/core'
 import * as En from 'blockly/msg/en'
 import { pythonGenerator } from 'blockly/python'
 import { ChevronLeft } from 'lucide-vue-next'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { registerAllBlocks } from '@/blockly/blocks'
+import { openPrompt } from '@/blockly/dialogs/urlPromptBridge'
 import { createTheme } from '@/blockly/theme'
 import { toolboxConfig } from '@/blockly/toolbox'
 import BlocklyToolbar from '@/components/workspace/BlockToolbar.vue'
@@ -106,7 +108,9 @@ const toolbarVisible = ref(false)
 const toolbarX = ref(0)
 const toolbarY = ref(0)
 let _selectedBlockId: string | null = null
+
 let _suppressNextDeselect = false
+let _returnEphemeralFocus: (() => void) | null = null
 
 // --- Workspace state ---
 const locked = ref(false)
@@ -289,8 +293,38 @@ onMounted(() => {
   if (!blocklyDiv.value)
     return
 
+  Blockly.dialog.setPrompt(openPrompt)
+
   document.addEventListener('pointerdown', (e) => {
-    _suppressNextDeselect = !!(e.target as Element).closest('[data-no-deselect]')
+    const target = e.target as Element
+    const inNoDeselect = !!target.closest('[data-no-deselect]')
+    _suppressNextDeselect = inNoDeselect
+    // Release ephemeral focus synchronously before Blockly processes the event.
+    // If released only inside the async change listener, Safari's gesture manager
+    // can see it as still held during gesture disposal, leaving a stuck gesture
+    // that causes "gesture had already been started" on the next block click.
+    if (!inNoDeselect && _returnEphemeralFocus) {
+      const rf = _returnEphemeralFocus
+      _returnEphemeralFocus = null
+      rf()
+    }
+  }, true)
+
+  document.addEventListener('focusin', (e) => {
+    const target = e.target as Element
+    const inNoDeselect = !!target?.closest('[data-no-deselect]')
+    if (inNoDeselect)
+      e.stopImmediatePropagation()
+  }, true)
+
+  document.addEventListener('focusout', (e) => {
+    const relatedTarget = e.relatedTarget as Element | null
+    const leavingNoDeselect = !relatedTarget || !relatedTarget.closest('[data-no-deselect]')
+    if (leavingNoDeselect && _returnEphemeralFocus) {
+      const rf = _returnEphemeralFocus
+      _returnEphemeralFocus = null
+      rf()
+    }
   }, true)
 
   cleanup()
@@ -348,6 +382,13 @@ onMounted(() => {
     if (event.type === Blockly.Events.SELECTED) {
       const selEvent = event as Blockly.Events.Selected
       if (selEvent.newElementId) {
+        // Release ephemeral focus if held (e.g. user clicks a different block
+        // directly without first deselecting — same Safari issue applies).
+        if (_returnEphemeralFocus) {
+          const rf = _returnEphemeralFocus
+          _returnEphemeralFocus = null
+          rf()
+        }
         const block = _workspace!.getBlockById(selEvent.newElementId)
         if (block && !block.isInFlyout) {
           _selectedBlockId = selEvent.newElementId
@@ -362,13 +403,39 @@ onMounted(() => {
       else {
         if (_suppressNextDeselect) {
           _suppressNextDeselect = false
+
           if (_selectedBlockId) {
             const block = _workspace!.getBlockById(_selectedBlockId)
-            if (block)
+            if (block) {
+              // Take ephemeral focus BEFORE setSelected so focusNode() inside
+              // setSelected skips activelyFocusNode (no SVG.focus() call).
+              // Without this, SVG gets focus → target.focus() causes focusout
+              // from SVG → onNodeBlur → batched SELECTED(null) that slips past
+              // the now-cleared suppress flag.
+              if (!_returnEphemeralFocus) {
+                try {
+                  const fm = getFocusManager()
+                  if (!fm.ephemeralFocusTaken()) {
+                    _returnEphemeralFocus = fm.takeEphemeralFocus(
+                      (document.activeElement as HTMLElement) ?? document.body,
+                    )
+                  }
+                }
+                catch (err) { console.warn('[suppress] takeEphemeralFocus failed:', err) }
+              }
               Blockly.common.setSelected(block)
+            }
           }
         }
         else {
+          // Safari doesn't focus SVG elements, so clicking the workspace never
+          // triggers focusout from a textarea — ephemeral focus would stay held
+          // forever. Release it here on any genuine (non-suppressed) deselect.
+          if (_returnEphemeralFocus) {
+            const rf = _returnEphemeralFocus
+            _returnEphemeralFocus = null
+            rf()
+          }
           if (!toolbarVisible.value)
             _selectedBlockId = null
           closeToolbar()
@@ -479,6 +546,7 @@ defineExpose({
   zoomToFit,
   openTrash,
   trashHasContents,
+  getBlockById: (id: string) => _workspace?.getBlockById(id) ?? null,
 })
 </script>
 
@@ -650,8 +718,8 @@ defineExpose({
 }
 
 .toolbox-toggle:hover {
-  color: var(--foreground);
-  background: var(--accent);
+  color: var(--primary-foreground);
+  background: var(--primary);
 }
 
 /* Flyout animation */

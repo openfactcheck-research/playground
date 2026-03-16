@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { X } from 'lucide-vue-next'
+import { Pencil, X } from 'lucide-vue-next'
 import { nextTick, onUnmounted, ref } from 'vue'
 
 export type WorkspaceTab = {
@@ -21,14 +21,17 @@ const emit = defineEmits<{
 
 const editingTabId = ref<string | null>(null)
 const editingName = ref('')
-const inputRef = ref<HTMLInputElement | null>(null)
+let inputRef: HTMLInputElement | null = null
+function setInputRef(el: unknown) {
+  inputRef = (el as HTMLInputElement) ?? null
+}
 
 async function startRename(tabId: string, currentName: string) {
   editingTabId.value = tabId
   editingName.value = currentName
   await nextTick()
-  inputRef.value?.focus()
-  inputRef.value?.select()
+  inputRef?.focus()
+  inputRef?.select()
 }
 
 function resetRename() {
@@ -162,7 +165,7 @@ function tabShift(tabId: string, index: number): number {
       class="group relative flex flex-1 min-w-0 items-center justify-center rounded-lg py-1.5 text-sm select-none"
       :class="[
         tab.id === activeTabId
-          ? 'bg-background dark:bg-muted text-foreground shadow-sm'
+          ? 'bg-background dark:bg-muted text-primary shadow-sm'
           : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
         dragTabId === tab.id ? 'z-10 shadow-lg scale-[1.03]' : '',
         dragTabId && dragTabId !== tab.id ? 'transition-transform duration-200 ease-out' : '',
@@ -180,7 +183,7 @@ function tabShift(tabId: string, index: number): number {
     >
       <!-- Close button — absolute, left corner, appears on hover -->
       <span
-        class="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full w-4 h-4 transition-opacity hover:bg-destructive/20 hover:text-destructive"
+        class="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full w-4 h-4 transition-opacity text-foreground dark:text-white hover:bg-destructive/20 hover:text-destructive"
         :class="tab.id === activeTabId ? 'opacity-30 group-hover:opacity-80' : 'opacity-0 group-hover:opacity-50'"
         @click.stop="emit('close', tab.id)"
       >
@@ -190,15 +193,18 @@ function tabShift(tabId: string, index: number): number {
       <!-- Inline rename input or tab name -->
       <input
         v-if="editingTabId === tab.id"
-        ref="inputRef"
+        :ref="setInputRef"
         v-model="editingName"
-        class="w-24 rounded border border-border bg-background px-1 py-0.5 text-center text-sm outline-none focus:border-primary"
+        class="w-full border-none bg-transparent px-1 text-center text-sm outline-none text-primary"
         @blur="finishRename"
         @keydown.enter="finishRename"
         @keydown.escape="resetRename"
         @click.stop
       >
-      <span v-else class="truncate px-5">{{ tab.name }}</span>
+      <span v-else class="truncate px-5 flex items-center gap-1.5">
+        {{ tab.name }}
+        <Pencil :size="10" class="shrink-0 opacity-0 group-hover:opacity-60 transition-opacity cursor-pointer text-foreground" @click.stop="startRename(tab.id, tab.name)" />
+      </span>
     </button>
   </div>
 </template>
