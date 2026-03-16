@@ -7,6 +7,8 @@ export const TOOLBOX_COLLAPSED_WIDTH = 60
 
 // Lucide-style SVG icons for each toolbox category (keyed by category name)
 export const CATEGORY_ICONS: Record<string, string> = {
+  // Input & Output — arrow-right-left
+  'Input & Output': '<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>',
   // Models & Agents — bot
   'Models & Agents': '<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>',
   // Fact-Checking — shield-check
@@ -15,18 +17,16 @@ export const CATEGORY_ICONS: Record<string, string> = {
   'Logic': '<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
   // Loops — repeat-2
   'Loops': '<path d="m2 9 3-3 3 3"/><path d="M13 18H7a2 2 0 0 1-2-2V6"/><path d="m22 15-3 3-3-3"/><path d="M11 6h6a2 2 0 0 1 2 2v10"/>',
-  // Math — sigma (calculator)
-  'Math': '<path d="M5.7 21a2 2 0 0 1-1.5-3.3L9 12 4.2 6.3A2 2 0 0 1 5.7 3h12.6a2 2 0 0 1 .7.1"/><path d="M19 3v18"/><path d="M15 12h4"/>',
+  // Math — pi
+  'Math': '<line x1="9" x2="9" y1="4" y2="20"/><path d="M4 7c0-1.7 1.3-3 3-3h13"/><path d="M18 20c-1.7 0-3-1.3-3-3V4"/>',
   // Text — type
   'Text': '<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/>',
   // Lists — list
   'Lists': '<path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/>',
   // Variables — variable
-  'Variables': '<path d="M8 21s-4-3-4-9 4-9 4-9"/><path d="M16 3s4 3 4 9-4 9-4 9"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="15" y2="15"/>',
-  // Input & Output — arrow-right-left
-  'Input & Output': '<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>',
-  // Functions — box
-  'Functions': '<path d="M12 3v6"/><circle cx="12" cy="12" r="1"/><path d="M18.4 7.2 12 12"/><path d="M5.6 7.2 12 12"/><path d="M4.2 20.4A2 2 0 0 1 3 18.6V5.4a2 2 0 0 1 1-1.7l7-4.1a2 2 0 0 1 2 0l7 4.1a2 2 0 0 1 1 1.7v13.2a2 2 0 0 1-1 1.7l-7 4.1a2 2 0 0 1-2 0l-7-4.1Z"/>',
+  'Variables': '<path d="M8 21s-4-3-4-9 4-9 4-9"/><path d="M16 3s4 3 4 9-4 9-4 9"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/>',
+  // Functions — braces
+  'Functions': '<path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 1 2 2h1"/><path d="M16 3h1a2 2 0 0 1 2 2v5a2 2 0 0 1 2 2 2 2 0 0 1-2 2v5a2 2 0 0 1-2 2h-1"/>',
 }
 
 export function useToolbox(getWorkspace: () => Blockly.WorkspaceSvg | null) {

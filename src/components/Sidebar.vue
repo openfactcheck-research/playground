@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { h, onMounted, onUnmounted, ref } from 'vue'
+import { AppWindow, CircleHelp, LogOut, Moon, Settings, Sun } from 'lucide-vue-next'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 
 defineProps<{
@@ -52,31 +53,12 @@ function handleOutsideClick(event: MouseEvent) {
   }
 }
 
-const WorkspaceIcon = {
-  render() {
-    return h('svg', { 'width': 20, 'height': 20, 'viewBox': '0 0 24 24', 'fill': 'none', 'stroke': 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
-      h('rect', { x: 3, y: 3, width: 18, height: 18, rx: 2 }),
-      h('path', { d: 'M3 9h18' }),
-      h('path', { d: 'M9 21V9' }),
-    ])
-  },
-}
-
-const SettingsIcon = {
-  render() {
-    return h('svg', { 'width': 20, 'height': 20, 'viewBox': '0 0 24 24', 'fill': 'none', 'stroke': 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
-      h('path', { d: 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z' }),
-      h('circle', { cx: 12, cy: 12, r: 3 }),
-    ])
-  },
-}
-
 const topNavItems = [
-  { id: 'workspace', label: 'Workspace', icon: WorkspaceIcon },
+  { id: 'workspace', label: 'Workspace', icon: AppWindow },
 ]
 
 const bottomNavItems = [
-  { id: 'settings', label: 'Settings', icon: SettingsIcon },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ]
 </script>
 
@@ -116,11 +98,7 @@ const bottomNavItems = [
         @mouseleave="hoveredId = null"
         @click="$emit('help')"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-          <path d="M12 17h.01" />
-        </svg>
+        <CircleHelp :size="20" />
         <span class="genie-label" :class="hoveredId === 'help' ? 'genie-visible' : ''">Help</span>
       </button>
 
@@ -132,16 +110,8 @@ const bottomNavItems = [
         @mouseleave="hoveredId = null"
         @click="toggleTheme"
       >
-        <svg v-if="isDark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="4" />
-          <path d="M12 2v2" /><path d="M12 20v2" />
-          <path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" />
-          <path d="M2 12h2" /><path d="M20 12h2" />
-          <path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" />
-        </svg>
-        <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-        </svg>
+        <Sun v-if="isDark" :size="20" />
+        <Moon v-else :size="20" />
         <span class="genie-label" :class="hoveredId === 'theme' ? 'genie-visible' : ''">
           {{ isDark ? 'Light mode' : 'Dark mode' }}
         </span>
@@ -203,11 +173,7 @@ const bottomNavItems = [
             class="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-500/10"
             @click="showUserMenu = false; $emit('logout')"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
+            <LogOut :size="14" />
             Log out
           </button>
         </div>

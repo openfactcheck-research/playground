@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Code2, EllipsisVertical, SlidersHorizontal } from 'lucide-vue-next'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 export type ToolbarAction = 'code' | 'controls' | 'menu'
@@ -82,26 +83,13 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handlePointerD
             @click.stop="emit('action', btn.action)"
           >
             <!-- Code icon -->
-            <svg v-if="btn.action === 'code'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
-            </svg>
+            <Code2 v-if="btn.action === 'code'" :size="14" />
 
             <!-- Controls icon -->
-            <svg v-else-if="btn.action === 'controls'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="4" x2="4" y1="21" y2="14" /><line x1="4" x2="4" y1="10" y2="3" />
-              <line x1="12" x2="12" y1="21" y2="12" /><line x1="12" x2="12" y1="8" y2="3" />
-              <line x1="20" x2="20" y1="21" y2="16" /><line x1="20" x2="20" y1="12" y2="3" />
-              <line x1="1" x2="7" y1="14" y2="14" />
-              <line x1="9" x2="15" y1="8" y2="8" />
-              <line x1="17" x2="23" y1="16" y2="16" />
-            </svg>
+            <SlidersHorizontal v-else-if="btn.action === 'controls'" :size="14" />
 
             <!-- Menu icon -->
-            <svg v-else-if="btn.action === 'menu'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="5" r="1" fill="currentColor" />
-              <circle cx="12" cy="12" r="1" fill="currentColor" />
-              <circle cx="12" cy="19" r="1" fill="currentColor" />
-            </svg>
+            <EllipsisVertical v-else-if="btn.action === 'menu'" :size="14" />
 
             <span v-if="btn.label">{{ btn.label }}</span>
           </button>

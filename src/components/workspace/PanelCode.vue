@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import hljs from 'highlight.js/lib/core'
 import python from 'highlight.js/lib/languages/python'
+import { Check, Code2, Copy } from 'lucide-vue-next'
 import { computed, nextTick, ref, watch } from 'vue'
 import 'highlight.js/styles/github-dark.css'
 
@@ -81,10 +82,7 @@ function copyCode() {
         v-html="line || '&#8203;'"
       /></code></pre>
       <div v-else class="flex-1 flex flex-col items-center justify-center text-center">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mb-3 text-muted-foreground/30">
-          <polyline points="16 18 22 12 16 6" />
-          <polyline points="8 6 2 12 8 18" />
-        </svg>
+        <Code2 :size="40" :stroke-width="1.5" class="mb-3 text-muted-foreground/30" />
         <p class="text-sm text-muted-foreground">
           Add blocks to see generated code
         </p>
@@ -97,15 +95,8 @@ function copyCode() {
         class="flex h-7 w-full items-center justify-center gap-1.5 rounded-md bg-secondary text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
         @click="copyCode"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <template v-if="copied">
-            <polyline points="20 6 9 17 4 12" />
-          </template>
-          <template v-else>
-            <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-          </template>
-        </svg>
+        <Check v-if="copied" :size="14" />
+        <Copy v-else :size="14" />
         {{ copied ? 'Copied!' : 'Copy Code' }}
       </button>
     </div>

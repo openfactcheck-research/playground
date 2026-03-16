@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ChevronDown, Lock, Trash2, Unlock } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -47,10 +48,8 @@ const dropdownItemClass = 'flex w-full items-center px-3 py-2 text-xs text-foreg
           :class="locked ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'"
           @click="emit('toggleLock')"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-            <path :d="locked ? 'M7 11V7a5 5 0 0 1 10 0v4' : 'M7 11V7a5 5 0 0 1 9.9-1'" />
-          </svg>
+          <Lock v-if="locked" :size="16" />
+          <Unlock v-else :size="16" />
         </button>
       </TooltipTrigger>
       <TooltipContent side="top">
@@ -67,9 +66,7 @@ const dropdownItemClass = 'flex w-full items-center px-3 py-2 text-xs text-foreg
         @click="dropdownOpen = !dropdownOpen"
       >
         <span class="w-8 text-right tabular-nums">{{ Math.round(zoomPercent * 100) }}%</span>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 transition-transform duration-150" :class="dropdownOpen ? 'rotate-180' : ''">
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        <ChevronDown :size="12" class="shrink-0 transition-transform duration-150" :class="dropdownOpen ? 'rotate-180' : ''" />
       </button>
 
       <div
@@ -95,10 +92,7 @@ const dropdownItemClass = 'flex w-full items-center px-3 py-2 text-xs text-foreg
           class="relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           @click="emit('openTrash')"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          </svg>
+          <Trash2 :size="16" />
           <span
             v-if="trashHasContents"
             class="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-400"

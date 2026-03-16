@@ -4,6 +4,7 @@ import { ZoomToFitControl } from '@blockly/zoom-to-fit'
 import * as Blockly from 'blockly/core'
 import * as En from 'blockly/msg/en'
 import { pythonGenerator } from 'blockly/python'
+import { ChevronLeft } from 'lucide-vue-next'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { registerAllBlocks } from '@/blockly/blocks'
 import { createTheme } from '@/blockly/theme'
@@ -490,20 +491,10 @@ defineExpose({
     :title="toolboxCollapsed ? 'Expand toolbox' : 'Collapse toolbox'"
     @click="toggleToolbox"
   >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+    <ChevronLeft
+      :size="14"
       :style="{ transform: toolboxCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }"
-    >
-      <polyline points="15 18 9 12 15 6" />
-    </svg>
+    />
   </button>
 
   <BlocklyToolbar

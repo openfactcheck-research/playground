@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { X } from 'lucide-vue-next'
 import { nextTick, onUnmounted, ref } from 'vue'
 
 export type WorkspaceTab = {
@@ -183,9 +184,7 @@ function tabShift(tabId: string, index: number): number {
         :class="tab.id === activeTabId ? 'opacity-30 group-hover:opacity-80' : 'opacity-0 group-hover:opacity-50'"
         @click.stop="emit('close', tab.id)"
       >
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-          <path d="M18 6L6 18M6 6l12 12" />
-        </svg>
+        <X :size="9" :stroke-width="3" />
       </span>
 
       <!-- Inline rename input or tab name -->

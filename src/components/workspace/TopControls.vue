@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { Component } from 'vue'
+import { ClipboardPaste, Copy, Download, LayoutGrid, Redo2, Trash2, Undo2, Upload } from 'lucide-vue-next'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 type EmitName = 'undo' | 'redo' | 'copy' | 'paste' | 'clearWorkspace' | 'export' | 'import' | 'templates'
@@ -6,7 +8,7 @@ type EmitName = 'undo' | 'redo' | 'copy' | 'paste' | 'clearWorkspace' | 'export'
 type ControlButton = {
   emit: EmitName
   tooltip: string
-  icon: string
+  icon: Component
   label?: string
   destructive?: boolean
 }
@@ -28,48 +30,48 @@ const controls: ControlItem[] = [
   {
     emit: 'undo',
     tooltip: 'Undo',
-    icon: '<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>',
+    icon: Undo2,
   },
   {
     emit: 'redo',
     tooltip: 'Redo',
-    icon: '<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>',
+    icon: Redo2,
   },
   { separator: true },
   {
     emit: 'copy',
     tooltip: 'Copy block (cross-tab)',
-    icon: '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+    icon: Copy,
   },
   {
     emit: 'paste',
     tooltip: 'Paste blocks',
-    icon: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>',
+    icon: ClipboardPaste,
   },
   { separator: true },
   {
     emit: 'clearWorkspace',
     tooltip: 'Clear all blocks',
-    icon: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+    icon: Trash2,
     destructive: true,
   },
   { separator: true },
   {
     emit: 'export',
     tooltip: 'Export pipeline',
-    icon: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+    icon: Upload,
     label: 'Export',
   },
   {
     emit: 'import',
     tooltip: 'Import pipeline',
-    icon: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+    icon: Download,
     label: 'Import',
   },
   {
     emit: 'templates',
     tooltip: 'Pipeline templates',
-    icon: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
+    icon: LayoutGrid,
     label: 'Templates',
   },
 ]
@@ -93,16 +95,9 @@ const controls: ControlItem[] = [
             ]"
             @click="(emit as (e: EmitName) => void)(item.emit)"
           >
-            <svg
-              :width="item.label ? 13 : 15"
-              :height="item.label ? 13 : 15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              v-html="item.icon"
+            <component
+              :is="item.icon"
+              :size="item.label ? 13 : 15"
             />
             <span v-if="item.label">{{ item.label }}</span>
           </button>

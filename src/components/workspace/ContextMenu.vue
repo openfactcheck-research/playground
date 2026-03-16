@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { Component } from 'vue'
+import { AlignLeft, Ban, ChevronsDownUp, ChevronsUpDown, CircleHelp, Copy, LayoutGrid, MessageCircle, Redo2, Trash2, Undo2 } from 'lucide-vue-next'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 export type ContextMenuItem = {
@@ -23,20 +25,20 @@ const menuRef = ref<HTMLElement | null>(null)
 const adjustedX = ref(x)
 const adjustedY = ref(y)
 
-// SVG inner content keyed by icon name
-const icons: Record<string, string> = {
-  'duplicate': '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
-  'comment': '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
-  'inline': '<path d="M21 6H3"/><path d="M15 12H3"/><path d="M17 18H3"/>',
-  'collapse': '<path d="m7 20 5-5 5 5"/><path d="m7 4 5 5 5-5"/>',
-  'collapse-all': '<path d="m7 20 5-5 5 5"/><path d="m7 4 5 5 5-5"/>',
-  'expand-all': '<path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>',
-  'disable': '<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>',
-  'delete': '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
-  'help': '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
-  'undo': '<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>',
-  'redo': '<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>',
-  'cleanup': '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
+// Lucide icon components keyed by icon name
+const icons: Record<string, Component> = {
+  'duplicate': Copy,
+  'comment': MessageCircle,
+  'inline': AlignLeft,
+  'collapse': ChevronsUpDown,
+  'collapse-all': ChevronsUpDown,
+  'expand-all': ChevronsDownUp,
+  'disable': Ban,
+  'delete': Trash2,
+  'help': CircleHelp,
+  'undo': Undo2,
+  'redo': Redo2,
+  'cleanup': LayoutGrid,
 }
 
 function getIcon(text: string): string | null {
@@ -139,17 +141,10 @@ onBeforeUnmount(() => {
             @click="handleItemClick(item, $event)"
           >
             <span class="context-menu-icon">
-              <svg
+              <component
+                :is="icons[getIcon(item.text)!]"
                 v-if="getIcon(item.text)"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                v-html="icons[getIcon(item.text)!]"
+                :size="16"
               />
               <span v-else class="context-menu-icon-spacer" />
             </span>
