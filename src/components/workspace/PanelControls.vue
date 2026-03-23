@@ -3,6 +3,7 @@ import type BlocklyWorkspace from './BlocklyWorkspace.vue'
 import type { SelectedBlockInfo } from './BlocklyWorkspace.vue'
 import { Lock, Puzzle, Snowflake } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import LanguageModelControls from './controls/LanguageModelControls.vue'
 import TextInputControls from './controls/TextInputControls.vue'
 
 const props = defineProps<{
@@ -71,6 +72,10 @@ onBeforeUnmount(() => {
         <!-- Block-specific controls -->
         <TextInputControls
           v-if="selectedBlock.blockType === 'text_input' && resolvedBlock"
+          :block="resolvedBlock"
+        />
+        <LanguageModelControls
+          v-else-if="selectedBlock.blockType === 'language_model' && resolvedBlock"
           :block="resolvedBlock"
         />
       </div>

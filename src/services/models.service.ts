@@ -6,23 +6,13 @@
 const API_URL = 'https://models.dev/api.json'
 
 // Top providers to show (in order)
-export const TOP_PROVIDERS = [
+export const ALLOWED_PROVIDERS = [
   'openai',
   'anthropic',
   'google',
-  'mistral',
-  'cohere',
-  'groq',
-  'together-ai',
-  'fireworks',
-  'deepseek',
-  'xai',
-  'huggingface',
-  'cerebras',
-  'github-models',
 ] as const
 
-export type ProviderId = typeof TOP_PROVIDERS[number]
+export type ProviderId = typeof ALLOWED_PROVIDERS[number]
 
 export type ModelInfo = {
   id: string
@@ -30,6 +20,7 @@ export type ModelInfo = {
   reasoning?: boolean
   tool_call?: boolean
   temperature?: boolean
+  release_date?: string
   modalities?: {
     input: string[]
     output: string[]
@@ -78,7 +69,7 @@ export async function fetchModelsData(): Promise<ModelsData> {
     const providers = new Map<string, ProviderInfo>()
 
     // Process only top providers
-    for (const providerId of TOP_PROVIDERS) {
+    for (const providerId of ALLOWED_PROVIDERS) {
       const provider = rawData[providerId]
       if (provider) {
         providers.set(providerId, {
@@ -110,7 +101,7 @@ export async function getProviderOptions(): Promise<Array<[string, string]>> {
   const data = await fetchModelsData()
   const options: Array<[string, string]> = []
 
-  for (const providerId of TOP_PROVIDERS) {
+  for (const providerId of ALLOWED_PROVIDERS) {
     const provider = data.providers.get(providerId)
     if (provider) {
       options.push([provider.name, providerId])
@@ -131,21 +122,25 @@ export async function getModelOptions(providerId: string): Promise<Array<[string
     return [['Default Model', 'default']]
   }
 
-  const options: Array<[string, string]> = []
-  const models = Object.entries(provider.models)
+  const EXCLUDE: Record<string, RegExp> = {
+    openai: /codex|embedding|deep-research|-\d{4}-\d{2}-\d{2}$/i,
+    anthropic: /-\d{8}$/,
+    google: /embedding|image|tts|live|preview/i,
+  }
 
-  // Sort models: prefer non-deprecated, then by name
+  const options: Array<[string, string]> = []
+  const excludePattern = EXCLUDE[providerId]
+  const models = Object.entries(provider.models)
+    .filter(([modelId]) => !excludePattern?.test(modelId))
+
   models.sort(([, a], [, b]) => {
-    // Prefer models with tool_call support
-    if (a.tool_call !== b.tool_call)
-      return a.tool_call ? -1 : 1
-    // Then sort alphabetically by display name
-    return (a.name || '').localeCompare(b.name || '')
+    const da = a.release_date ?? ''
+    const db = b.release_date ?? ''
+    return db.localeCompare(da)
   })
 
-  // Include all models
-  for (const [modelId, model] of models) {
-    options.push([model.name || modelId, modelId])
+  for (const [modelId] of models) {
+    options.push([modelId, modelId])
   }
 
   return options.length > 0 ? options : [['Default Model', 'default']]

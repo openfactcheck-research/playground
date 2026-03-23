@@ -373,6 +373,7 @@ function blockStyle(fill: string, isDark: boolean, outline?: string) {
 type PaletteKey = keyof Palette
 
 const CATEGORY_COLOUR_MAP: Record<string, PaletteKey> = {
+  models: 'violet',
   io: 'sky',
   logic: 'blue',
   loop: 'green',

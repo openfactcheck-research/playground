@@ -78,7 +78,7 @@ export function register(): void {
 
       this.appendDummyInput('INPUT_TEXT_ROW')
         .setAlign(Blockly.inputs.Align.RIGHT)
-        .appendField(new FieldTextPreview('Enter your text here...', 192), 'INPUT_TEXT')
+        .appendField(new FieldTextPreview('Enter your text here...', 193), 'INPUT_TEXT')
 
       this.setNextStatement(true, null)
       this.setInputsInline(false)

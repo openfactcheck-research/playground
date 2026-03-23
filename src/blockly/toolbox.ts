@@ -79,11 +79,15 @@ const functionsCategory = category('Functions', 'procedure_category', undefined,
 const ioCategory = category('Input & Output', 'io_category', [
   block('text_input'),
 ])
+const modelsAgentsCategory = category('Models & Agents', 'models_category', [
+  block('language_model'),
+])
 
 export const toolboxConfig = {
   kind: 'categoryToolbox',
   contents: [
     ioCategory,
+    modelsAgentsCategory,
     sep(),
     logicCategory,
     loopsCategory,
