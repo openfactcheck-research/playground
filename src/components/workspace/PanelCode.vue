@@ -1,34 +1,26 @@
 <script setup lang="ts">
-import hljs from 'highlight.js/lib/core'
-import python from 'highlight.js/lib/languages/python'
 import { Check, Code2, Copy } from 'lucide-vue-next'
+import { createHighlighter } from 'shiki'
 import { computed, nextTick, ref, watch } from 'vue'
-import 'highlight.js/styles/github-dark.css'
+import { Button } from '@/components/ui/button'
 
 const { code, highlightCode } = defineProps<{
   code: string
   highlightCode?: string
 }>()
 
-hljs.registerLanguage('python', python)
-
 const copied = ref(false)
 const codeRef = ref<HTMLElement>()
+const highlightedHtml = ref('')
 
-const highlightedLines = computed(() => {
-  if (!code)
-    return []
-  try {
-    const html = hljs.highlight(code, { language: 'python' }).value
-    const lines = html.split('\n')
-    if (lines[lines.length - 1] === '')
-      lines.pop()
-    return lines
-  }
-  catch {
-    return code.split('\n')
-  }
-})
+let _highlighter: ReturnType<typeof createHighlighter> | null = null
+
+function getHighlighter() {
+  return _highlighter ??= createHighlighter({
+    themes: ['vitesse-dark', 'vitesse-light'],
+    langs: ['python'],
+  })
+}
 
 const highlightedLineIndices = computed((): Set<number> => {
   if (!highlightCode || !code)
@@ -45,11 +37,49 @@ const highlightedLineIndices = computed((): Set<number> => {
   return result
 })
 
-watch(() => highlightCode, async () => {
-  if (!highlightCode)
+async function highlight() {
+  if (!code) {
+    highlightedHtml.value = ''
     return
+  }
+
+  const highlighter = await getHighlighter()
+
+  highlightedHtml.value = highlighter.codeToHtml(code, {
+    lang: 'python',
+    themes: {
+      dark: 'vitesse-dark',
+      light: 'vitesse-light',
+    },
+    defaultColor: false,
+    transformers: [
+      {
+        line(node: any, line: number) {
+          node.properties['data-line'] = line
+        },
+      },
+    ],
+  })
+}
+
+function applyLineHighlight() {
+  if (!codeRef.value)
+    return
+  const lines = codeRef.value.querySelectorAll('.line')
+  const indices = highlightedLineIndices.value
+  lines.forEach((el, i) => {
+    el.classList.toggle('highlight-line', indices.has(i))
+  })
+
+  if (indices.size > 0)
+    codeRef.value.querySelector('.highlight-line')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+watch(() => code, highlight, { immediate: true })
+
+watch([() => highlightCode, highlightedHtml], async () => {
   await nextTick()
-  codeRef.value?.querySelector('.highlight-line')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  applyLineHighlight()
 })
 
 function copyCode() {
@@ -74,13 +104,12 @@ function copyCode() {
 
     <!-- Content -->
     <div class="flex-1 min-h-0 overflow-auto p-4 flex flex-col">
-      <pre v-if="code" ref="codeRef" class="font-mono text-xs leading-relaxed m-0"><code class="block"><span
-        v-for="(line, i) in highlightedLines"
-        :key="i"
-        class="block -mx-4 px-4"
-        :class="highlightedLineIndices.has(i) ? 'highlight-line bg-amber-400/15' : ''"
-        v-html="line || '&#8203;'"
-      /></code></pre>
+      <div
+        v-if="code"
+        ref="codeRef"
+        class="shiki-wrapper flex-1 text-xs leading-snug"
+        v-html="highlightedHtml"
+      />
       <div v-else class="flex-1 flex flex-col items-center justify-center text-center">
         <Code2 :size="40" :stroke-width="1.5" class="mb-3 text-muted-foreground/30" />
         <p class="text-sm text-muted-foreground">
@@ -91,14 +120,74 @@ function copyCode() {
 
     <!-- Footer -->
     <div v-if="code" class="shrink-0 border-t border-border px-3 py-2">
-      <button
-        class="flex h-7 w-full items-center justify-center gap-1.5 rounded-md bg-secondary text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
+      <Button
+        variant="secondary"
+        size="sm"
+        class="w-full"
         @click="copyCode"
       >
         <Check v-if="copied" :size="14" />
         <Copy v-else :size="14" />
         {{ copied ? 'Copied!' : 'Copy Code' }}
-      </button>
+      </Button>
     </div>
   </div>
 </template>
+
+<style>
+/* Shiki dual-theme: dark mode (default) */
+.shiki-wrapper .shiki,
+.shiki-wrapper .shiki span {
+  color: var(--shiki-dark);
+}
+
+/* Shiki dual-theme: light mode */
+:root:not(.dark) .shiki-wrapper .shiki,
+:root:not(.dark) .shiki-wrapper .shiki span {
+  color: var(--shiki-light);
+}
+
+/* Code block reset */
+.shiki-wrapper pre,
+.shiki-wrapper pre code {
+  margin: 0;
+  background: transparent !important;
+}
+
+.shiki-wrapper pre,
+.shiki-wrapper pre code,
+.shiki-wrapper pre code span {
+  font-family: 'Geist Mono', monospace !important;
+}
+
+.shiki-wrapper pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: hidden;
+  min-height: 100%;
+}
+
+/* Line styling + highlight */
+.shiki-wrapper code .line {
+  display: block;
+  margin-inline: -0.75rem;
+  padding-inline: 0.75rem;
+  padding-left: 2rem;
+  position: relative;
+}
+
+.shiki-wrapper code .line::before {
+  content: attr(data-line);
+  position: absolute;
+  left: 0;
+  width: 1.25rem;
+  text-align: right;
+  color: color-mix(in srgb, currentColor 30%, transparent);
+  pointer-events: none;
+  user-select: none;
+}
+
+.shiki-wrapper code .highlight-line {
+  background-color: rgb(251 191 36 / 0.15);
+}
+</style>
