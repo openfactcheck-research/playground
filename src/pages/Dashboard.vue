@@ -11,6 +11,7 @@ import Sidebar from '@/components/Sidebar.vue'
 import WelcomeTour from '@/components/WelcomeTour.vue'
 import BlocklyWorkspace from '@/components/workspace/BlocklyWorkspace.vue'
 import WorkspaceBottomControls from '@/components/workspace/BottomControls.vue'
+import DialogClear from '@/components/workspace/DialogClear.vue'
 import DialogExport from '@/components/workspace/DialogExport.vue'
 import DialogImport from '@/components/workspace/DialogImport.vue'
 import WorkspaceInspector from '@/components/workspace/Inspector.vue'
@@ -92,6 +93,18 @@ watch(selectedBlockInfo, () => {
 const zoomPercent = ref(1.0)
 const workspaceLocked = ref(false)
 const trashHasContents = ref(false)
+
+// Clear workspace
+const clearDialogOpen = ref(false)
+
+function handleClearWorkspace() {
+  clearDialogOpen.value = true
+}
+
+function confirmClear() {
+  blocklyRef.value?.clearWorkspace()
+  clearDialogOpen.value = false
+}
 
 // Export
 const exportDialogOpen = ref(false)
@@ -184,6 +197,7 @@ async function handleLogout() {
   <div class="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
     <input ref="fileInputRef" type="file" accept=".json" class="hidden" @change="handleImportFile">
 
+    <DialogClear v-model:open="clearDialogOpen" @confirm="confirmClear" />
     <DialogExport v-model:open="exportDialogOpen" v-model:filename="exportFilename" @confirm="confirmExport" />
     <DialogImport v-model:open="importDialogOpen" title="Import Pipeline" :item-name="importFileName" @select="handleImportAction" />
     <DialogUrlPrompt v-model:open="promptOpen" />
@@ -234,7 +248,7 @@ async function handleLogout() {
             @redo="blocklyRef?.redo()"
             @copy="blocklyRef?.copySelectedBlocks()"
             @paste="blocklyRef?.pasteBlocks()"
-            @clear-workspace="blocklyRef?.clearWorkspace()"
+            @clear-workspace="handleClearWorkspace"
             @export="handleExport"
             @import="fileInputRef?.click()"
             @templates="() => {}"
