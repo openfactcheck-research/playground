@@ -1,0 +1,35 @@
+changelog:
+  categories:
+    - title: 🚨 Breaking Changes
+      description: Changes that break existing functionality
+      labels:
+        - breaking
+    - title: ✨ New Features
+      description: New features and enhancements
+      labels:
+        - enhancement
+    - title: 🐛 Bug Fixes
+      description: Bug fixes and patches
+      labels:
+        - fix
+        - bug
+    - title: 📝 Documentation Updates
+      description: Changes to documentation
+      labels:
+        - documentation
+    - title: 🛠 Maintenance Tasks
+      description: Maintenance tasks and housekeeping
+      labels:
+        - chore
+        - refactor
+        - style
+        - performance
+        - build
+    - title: ✅ Tests
+      description: Changes to tests
+      labels:
+        - test
+    - title: Others
+      description: Other changes
+      labels:
+        - '*'

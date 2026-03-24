@@ -1,32 +1,37 @@
-name: Lint
+name: CI
 
 on:
   push:
     branches:
-      - '*'
-  pull_request:
-    branches:
-      - main
+      - '**'
+      - '!main'
+
+permissions:
+  contents: read
 
 jobs:
   lint:
-
+    name: Lint
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v6
 
+      - name: Install Task
+        uses: go-task/setup-task@v2
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10
-          cache: true
 
-      - name: Use Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24.x
 
-      - run: pnpm install
+      - name: Install dependencies
+        run: pnpm install
 
-      - run: pnpm lint
+      - name: Lint
+        run: task app:lint

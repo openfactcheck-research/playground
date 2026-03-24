@@ -70,7 +70,7 @@ let _themeObserver: MutationObserver | null = null
 let _tooltipCleanup: (() => void) | null = null
 
 // --- Composables ---
-const { saveWorkspace, loadWorkspace, getState, setState } = useWorkspacePersistence(
+const { saveWorkspace, loadWorkspace, getState: getBlocklyState, setState: setBlocklyState } = useWorkspacePersistence(
   () => _workspace,
   () => currentWorkspaceId,
   () => generateCode(),
@@ -425,8 +425,12 @@ watch(() => props.workspaceId, (newId, oldId) => {
   if (!_workspace || newId === oldId)
     return
   saveWorkspace(oldId)
+  saveNotes(oldId)
+  selectedNoteId.value = null
+  closeNoteToolbar()
   currentWorkspaceId = newId
   loadWorkspace(newId)
+  loadNotes(newId)
   applyVerboseToAll()
   generateCode()
   requestAnimationFrame(() => updateNotesTransform())
@@ -743,8 +747,20 @@ defineExpose({
   resize,
   saveWorkspace,
   loadWorkspace,
-  getState,
-  setState,
+  getState: () => ({ blocks: getBlocklyState(), notes: notes.value }),
+  setState: (data: any) => {
+    if (data?.blocks) {
+      setBlocklyState(data.blocks)
+    }
+    else {
+      // Backwards compat: old exports have workspace state at top level
+      setBlocklyState(data)
+    }
+    if (data?.notes) {
+      notes.value = data.notes
+      saveNotes()
+    }
+  },
   copySelectedBlocks,
   pasteBlocks,
   hasSelectedBlocks,

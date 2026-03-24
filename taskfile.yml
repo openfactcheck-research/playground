@@ -15,12 +15,19 @@ includes:
     internal: true
   check:
     taskfile: ./taskfiles/check.taskfile.yml
+  release:
+    taskfile: ./taskfiles/release.taskfile.yml
   deploy:
     taskfile: ./taskfiles/deploy.taskfile.yml
   app:
     taskfile: ./taskfiles/app.taskfile.yml
 
 tasks:
+  list:
+    desc: Show all available tasks
+    cmds:
+      - task --list --sort alphanumeric
+
   default:
     cmds:
       - |
@@ -29,6 +36,7 @@ tasks:
 
         printf '{{.COLOR_CYAN}}Namespaces{{.COLOR_RESET}}\n'
         printf '  app      Frontend development (dev, build, lint)\n'
+        printf '  release  Release workflow (bumps version, tags, CI deploys)\n'
         printf '  deploy   Infrastructure (init, plan, apply, destroy)\n'
         printf '  check    Verify dependencies\n\n'
 
