@@ -207,7 +207,7 @@ async function handleLogout() {
         @help="welcomeTourRef?.show()"
       />
       <main class="flex flex-1 flex-col overflow-hidden">
-        <div class="relative flex-1 overflow-hidden">
+        <div class="relative flex-1 overflow-hidden" style="background-color: light-dark(#fafafa, #171717); background-image: radial-gradient(circle, light-dark(#d4d4d4, #404040) 1px, transparent 1px); background-size: 20px 20px;">
           <BlocklyWorkspace
             ref="blocklyRef"
             :project-id="projectId"
@@ -238,6 +238,7 @@ async function handleLogout() {
             @export="handleExport"
             @import="fileInputRef?.click()"
             @templates="() => {}"
+            @add-note="blocklyRef?.addNote()"
           />
           <WorkspaceBottomControls
             :zoom-percent="zoomPercent"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
-import { ClipboardPaste, Copy, Download, LayoutGrid, Redo2, Trash2, Undo2, Upload } from 'lucide-vue-next'
+import { ClipboardPaste, Copy, Download, LayoutGrid, Redo2, StickyNote, Trash2, Undo2, Upload } from 'lucide-vue-next'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useVerboseMode } from '@/composables/useVerboseMode'
@@ -19,11 +19,12 @@ const emit = defineEmits<{
   export: []
   import: []
   templates: []
+  addNote: []
 }>()
 
 const { verboseMode } = useVerboseMode(() => props.projectId, () => props.workspaceId)
 
-type EmitName = 'undo' | 'redo' | 'copy' | 'paste' | 'clearWorkspace' | 'export' | 'import' | 'templates'
+type EmitName = 'undo' | 'redo' | 'copy' | 'paste' | 'clearWorkspace' | 'export' | 'import' | 'templates' | 'addNote'
 
 type ControlButton = {
   emit: EmitName
@@ -56,6 +57,11 @@ const controls: ControlItem[] = [
     emit: 'paste',
     tooltip: 'Paste blocks',
     icon: ClipboardPaste,
+  },
+  {
+    emit: 'addNote',
+    tooltip: 'Add a note',
+    icon: StickyNote,
   },
   { separator: true },
   {

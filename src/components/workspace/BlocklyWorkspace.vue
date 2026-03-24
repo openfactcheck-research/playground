@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ToolbarAction } from '@/components/workspace/BlockToolbar.vue'
+import type { NoteColor } from '@/composables/useWorkspaceNotes'
 import { ZoomToFitControl } from '@blockly/zoom-to-fit'
 import * as Blockly from 'blockly/core'
 import { getFocusManager } from 'blockly/core'
@@ -14,11 +15,14 @@ import { createTheme } from '@/blockly/theme'
 import { toolboxConfig } from '@/blockly/toolbox'
 import BlocklyToolbar from '@/components/workspace/BlockToolbar.vue'
 import BlocklyContextMenu from '@/components/workspace/ContextMenu.vue'
+import NoteToolbar from '@/components/workspace/NoteToolbar.vue'
+import StickyNote from '@/components/workspace/StickyNote.vue'
 import { useBlockTooltip } from '@/composables/useBlockTooltip'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { useToolbox } from '@/composables/useToolbox'
 import { useVerboseMode } from '@/composables/useVerboseMode'
 import { useWorkspaceClipboard } from '@/composables/useWorkspaceClipboard'
+import { useWorkspaceNotes } from '@/composables/useWorkspaceNotes'
 import { useWorkspacePersistence } from '@/composables/useWorkspacePersistence'
 import '@/blockly/styles.css'
 import 'blockly/blocks'
@@ -112,6 +116,18 @@ const toolbarX = ref(0)
 const toolbarY = ref(0)
 let _selectedBlockId: string | null = null
 
+// --- Notes ---
+const notesCanvasRef = ref<HTMLElement>()
+const currentScale = ref(1)
+const selectedNoteId = ref<string | null>(null)
+const { notes, addNote: createNote, deleteNote, updateNote, save: saveNotes, load: loadNotes } = useWorkspaceNotes(() => currentWorkspaceId)
+
+// --- Note toolbar state ---
+const noteToolbarVisible = ref(false)
+const noteToolbarX = ref(0)
+const noteToolbarY = ref(0)
+const noteToolbarColor = ref<NoteColor>('yellow')
+
 let _suppressNextDeselect = false
 let _returnEphemeralFocus: (() => void) | null = null
 
@@ -146,6 +162,10 @@ function clearWorkspace(): void {
     return
   _workspace.clear()
   localStorage.removeItem(`blockly-workspace-state-${currentWorkspaceId}`)
+  notes.value = []
+  saveNotes()
+  selectedNoteId.value = null
+  closeNoteToolbar()
   emit('codeChange', '')
   emit('blockCountChange', 0)
 }
@@ -160,6 +180,17 @@ function undo(): void {
 
 function redo(): void {
   _workspace?.undo(true)
+}
+
+function addNote(): void {
+  if (!_workspace)
+    return
+  const metrics = _workspace.getMetrics()
+  const wsX = (metrics.viewLeft + metrics.viewWidth / 2 - 125) / _workspace.scale
+  const wsY = (metrics.viewTop + metrics.viewHeight / 2 - 100) / _workspace.scale
+  const id = createNote(wsX, wsY)
+  selectedNoteId.value = id
+  updateNoteToolbarForNote(id)
 }
 
 function resize(): void {
@@ -266,6 +297,112 @@ function handleToolbarAction(action: ToolbarAction) {
   }
 }
 
+// --- Note toolbar ---
+function updateNoteToolbarForNote(noteId: string): void {
+  const note = notes.value.find(n => n.id === noteId)
+  if (!note || !notesCanvasRef.value) {
+    noteToolbarVisible.value = false
+    return
+  }
+  const canvas = notesCanvasRef.value
+  const scale = currentScale.value
+  const origin = _workspace ? _workspace.getOriginOffsetInPixels() : { x: 0, y: 0 }
+  const parentRect = canvas.parentElement!.getBoundingClientRect()
+
+  const screenX = parentRect.left + origin.x + note.x * scale
+  const screenY = parentRect.top + origin.y + note.y * scale
+  const screenW = note.width * scale
+
+  noteToolbarX.value = screenX + screenW / 2
+  noteToolbarY.value = screenY - 8
+  noteToolbarColor.value = note.color
+  noteToolbarVisible.value = true
+}
+
+function closeNoteToolbar(): void {
+  noteToolbarVisible.value = false
+}
+
+function handleNoteColor(color: NoteColor): void {
+  if (!selectedNoteId.value) {
+    return
+  }
+  updateNote(selectedNoteId.value, { color })
+  noteToolbarColor.value = color
+}
+
+function handleNoteMenu(): void {
+  if (!selectedNoteId.value) {
+    return
+  }
+  deleteNote(selectedNoteId.value)
+  selectedNoteId.value = null
+  closeNoteToolbar()
+}
+
+function handleNoteUpdate(id: string, changes: Partial<import('@/composables/useWorkspaceNotes').StickyNoteData>): void {
+  updateNote(id, changes)
+  if (id === selectedNoteId.value) {
+    updateNoteToolbarForNote(id)
+  }
+}
+
+function handleNoteSelect(id: string): void {
+  // Deselect any Blockly block — setSelected(null) has a Blockly bug where it
+  // calls null.canBeFocused() in the focus manager, so guard with try/catch.
+  if (_workspace) {
+    try {
+      Blockly.common.setSelected(null as any)
+    }
+    catch {}
+  }
+  _selectedBlockId = null
+  closeToolbar()
+  emit('blockSelect', null)
+
+  selectedNoteId.value = id
+  const note = notes.value.find(n => n.id === id)
+  if (note) {
+    noteToolbarColor.value = note.color
+  }
+  updateNoteToolbarForNote(id)
+}
+
+/** Convert screen coordinates to workspace coordinates and find a note under the cursor. */
+function findNoteAtScreenPoint(clientX: number, clientY: number): string | null {
+  if (!_workspace || !notesCanvasRef.value) {
+    return null
+  }
+  const parent = notesCanvasRef.value.parentElement
+  if (!parent) {
+    return null
+  }
+  const parentRect = parent.getBoundingClientRect()
+  const origin = _workspace.getOriginOffsetInPixels()
+  const scale = _workspace.getScale()
+  // Convert screen → workspace coordinates
+  const wsX = (clientX - parentRect.left - origin.x) / scale
+  const wsY = (clientY - parentRect.top - origin.y) / scale
+  // Check notes in reverse order (topmost first)
+  for (let i = notes.value.length - 1; i >= 0; i--) {
+    const n = notes.value[i]!
+    if (wsX >= n.x && wsX <= n.x + n.width && wsY >= n.y && wsY <= n.y + n.height) {
+      return n.id
+    }
+  }
+  return null
+}
+
+function updateNotesTransform(): void {
+  if (!_workspace || !notesCanvasRef.value) {
+    return
+  }
+  const origin = _workspace.getOriginOffsetInPixels()
+  const scale = _workspace.getScale()
+  currentScale.value = scale
+  notesCanvasRef.value.style.transform = `translate(${origin.x}px, ${origin.y}px) scale(${scale})`
+}
+
 // --- Lifecycle ---
 function cleanup() {
   _tooltipCleanup?.()
@@ -278,6 +415,7 @@ function cleanup() {
   _zoomToFit = null
   if (_workspace) {
     saveWorkspace()
+    saveNotes()
     _workspace.dispose()
     _workspace = null
   }
@@ -291,6 +429,7 @@ watch(() => props.workspaceId, (newId, oldId) => {
   loadWorkspace(newId)
   applyVerboseToAll()
   generateCode()
+  requestAnimationFrame(() => updateNotesTransform())
 })
 
 onMounted(() => {
@@ -339,12 +478,6 @@ onMounted(() => {
   _workspace = Blockly.inject(el, {
     toolbox: toolboxConfig,
     theme: createTheme(dark),
-    grid: {
-      spacing: 20,
-      length: 2,
-      colour: dark ? '#404040' : '#d4d4d4',
-      snap: false,
-    },
     zoom: {
       controls: false,
       wheel: true,
@@ -357,6 +490,31 @@ onMounted(() => {
     move: { scrollbars: true, drag: true, wheel: true },
     sounds: true,
   })
+
+  // Intercept clicks on workspace background that hit a note behind the SVG.
+  // Notes are at z-index: 0 (visually behind blocks at z-index: 1), so the
+  // SVG captures pointer events first. Detect clicks on the background that
+  // overlap a note and redirect them.
+  const svgEl = (el.querySelector('.blocklySvg') ?? el) as HTMLElement
+  svgEl.addEventListener('pointerdown', (e: PointerEvent) => {
+    const target = e.target as SVGElement
+    // Only intercept clicks on the workspace background, not on blocks
+    if (!target.classList.contains('blocklyMainBackground')) {
+      return
+    }
+    const noteId = findNoteAtScreenPoint(e.clientX, e.clientY)
+    if (!noteId) {
+      // Clicked empty workspace — deselect any active note
+      if (selectedNoteId.value) {
+        selectedNoteId.value = null
+        closeNoteToolbar()
+      }
+      return
+    }
+    e.stopPropagation()
+    e.preventDefault()
+    handleNoteSelect(noteId)
+  }, true)
 
   // Patch context menu prototypes
   Blockly.BlockSvg.prototype.showContextMenu = function (e: PointerEvent) {
@@ -396,6 +554,8 @@ onMounted(() => {
         const block = _workspace!.getBlockById(selEvent.newElementId)
         if (block && !block.isInFlyout) {
           _selectedBlockId = selEvent.newElementId
+          selectedNoteId.value = null
+          closeNoteToolbar()
           updateToolbarPosition()
           emit('blockSelect', { id: block.id, blockType: block.type, frozen: !block.isEnabled() })
         }
@@ -443,6 +603,8 @@ onMounted(() => {
           if (!toolbarVisible.value)
             _selectedBlockId = null
           closeToolbar()
+          selectedNoteId.value = null
+          closeNoteToolbar()
           emit('blockSelect', null)
         }
       }
@@ -451,8 +613,13 @@ onMounted(() => {
     if (event.type === Blockly.Events.BLOCK_MOVE || event.type === Blockly.Events.VIEWPORT_CHANGE) {
       if (_selectedBlockId)
         updateToolbarPosition()
-      if (event.type === Blockly.Events.VIEWPORT_CHANGE)
+      if (event.type === Blockly.Events.VIEWPORT_CHANGE) {
+        updateNotesTransform()
+        if (selectedNoteId.value) {
+          updateNoteToolbarForNote(selectedNoteId.value)
+        }
         emit('viewportChange', _workspace!.getScale())
+      }
     }
 
     if (event.type === Blockly.Events.BLOCK_DELETE) {
@@ -465,6 +632,7 @@ onMounted(() => {
 
     if (_workspace.isDragging()) {
       toolbarVisible.value = false
+      noteToolbarVisible.value = false
       return
     }
     if (!SUPPORTED_EVENTS.has(event.type as (typeof Blockly.Events.BLOCK_CHANGE)))
@@ -516,7 +684,9 @@ onMounted(() => {
   Blockly.svgResize(_workspace)
   currentWorkspaceId = props.workspaceId
   loadWorkspace()
+  loadNotes()
   generateCode()
+  requestAnimationFrame(() => updateNotesTransform())
 
   injectToolboxIcons(_workspace)
   toolboxCollapsed.value = true
@@ -528,7 +698,24 @@ onMounted(() => {
 
 const _onOpenControls = () => emit('openControls')
 onMounted(() => window.addEventListener('blockly:open-controls', _onOpenControls))
+
+function handleKeyDown(e: KeyboardEvent): void {
+  if (!selectedNoteId.value)
+    return
+  if (e.key !== 'Delete' && e.key !== 'Backspace')
+    return
+  const tag = (document.activeElement as HTMLElement)?.tagName
+  if (tag === 'TEXTAREA' || tag === 'INPUT')
+    return
+  e.preventDefault()
+  deleteNote(selectedNoteId.value)
+  selectedNoteId.value = null
+  closeNoteToolbar()
+}
+
+onMounted(() => document.addEventListener('keydown', handleKeyDown))
 onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleKeyDown)
   window.removeEventListener('blockly:open-controls', _onOpenControls)
   cleanup()
 })
@@ -552,6 +739,7 @@ defineExpose({
   clearWorkspace,
   undo,
   redo,
+  addNote,
   resize,
   saveWorkspace,
   loadWorkspace,
@@ -577,6 +765,21 @@ defineExpose({
 <template>
   <div ref="blocklyDiv" class="blocklyDiv" :class="{ 'workspace-locked': locked }" />
 
+  <!-- Custom notes overlay — below blocks by default, above when a note is selected -->
+  <div class="notes-layer" :class="{ 'notes-layer--active': selectedNoteId !== null }">
+    <div ref="notesCanvasRef" class="notes-canvas">
+      <StickyNote
+        v-for="note in notes"
+        :key="note.id"
+        :note="note"
+        :scale="currentScale"
+        :selected="selectedNoteId === note.id"
+        @update="handleNoteUpdate"
+        @select="handleNoteSelect"
+      />
+    </div>
+  </div>
+
   <button
     class="toolbox-toggle"
     :style="{ left: toolboxCollapsed ? `${TOOLBOX_COLLAPSED_WIDTH}px` : `${TOOLBOX_FULL_WIDTH}px` }"
@@ -596,6 +799,16 @@ defineExpose({
 
     @action="handleToolbarAction"
     @close="closeToolbar"
+  />
+
+  <NoteToolbar
+    :visible="noteToolbarVisible"
+    :x="noteToolbarX"
+    :y="noteToolbarY"
+    :active-color="noteToolbarColor"
+    @set-color="handleNoteColor"
+    @menu="handleNoteMenu"
+    @close="closeNoteToolbar"
   />
 
   <BlocklyContextMenu
@@ -622,6 +835,26 @@ defineExpose({
   z-index: 1;
 }
 
+.notes-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.notes-layer--active {
+  z-index: 2;
+}
+
+.notes-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
 .blocklyDiv.workspace-locked :deep(.blocklyBlockCanvas),
 .blocklyDiv.workspace-locked :deep(.blocklyBubbleCanvas) {
   pointer-events: none;
@@ -637,11 +870,13 @@ defineExpose({
 .blocklyDiv :deep(.blocklySvg) {
   outline: none;
   border: none;
+  background-color: transparent !important;
 }
 
 .blocklyDiv :deep(.blocklyMainBackground) {
   stroke: none;
   cursor: grab;
+  fill: transparent;
 }
 
 .blocklyDiv :deep(.blocklyMainBackground:active) {

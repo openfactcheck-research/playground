@@ -26,6 +26,7 @@
     "clsx": "^2.1.1",
     "codemirror": "^6.0.2",
     "lucide-vue-next": "^0.563.0",
+    "marked": "^17.0.5",
     "nanoid": "^5.1.7",
     "reka-ui": "^2.8.0",
     "shiki": "^4.0.2",
