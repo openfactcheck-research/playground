@@ -57,6 +57,9 @@ async function highlight() {
         line(node: any, line: number) {
           node.properties['data-line'] = line
         },
+        postprocess(html: string) {
+          return html.replace(/\n/g, '')
+        },
       },
     ],
   })
@@ -107,7 +110,7 @@ function copyCode() {
       <div
         v-if="code"
         ref="codeRef"
-        class="shiki-wrapper flex-1 text-xs leading-snug"
+        class="shiki-wrapper flex-1 text-xs leading-normal"
         v-html="highlightedHtml"
       />
       <div v-else class="flex-1 flex flex-col items-center justify-center text-center">

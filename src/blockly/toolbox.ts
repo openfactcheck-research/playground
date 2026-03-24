@@ -81,6 +81,7 @@ const ioCategory = category('Input & Output', 'io_category', [
 ])
 const modelsAgentsCategory = category('Models & Agents', 'models_category', [
   block('language_model'),
+  block('prompt_template'),
 ])
 
 export const toolboxConfig = {

@@ -85,7 +85,6 @@ function applyTemperatureRow(block: Blockly.Block, show: boolean): void {
         .setAlign(Blockly.inputs.Align.RIGHT)
         .appendField('Temperature')
         .appendField(new FieldDeferredSlider(0.7, 0, 2, 0.1), 'TEMPERATURE')
-      block.moveInputBefore('TEMPERATURE_ROW', 'API_KEY_ROW')
       // Restore pending temperature from deserialization
       const pendingTemp = (block as any).__pendingTemp
       if (pendingTemp !== null && pendingTemp !== undefined) {
@@ -116,7 +115,6 @@ function applyTopPRow(block: Blockly.Block, show: boolean): void {
         .setAlign(Blockly.inputs.Align.RIGHT)
         .appendField('Top P')
         .appendField(new FieldDeferredSlider(1.0, 0, 1, 0.05), 'TOP_P')
-      block.moveInputBefore('TOP_P_ROW', 'API_KEY_ROW')
       const pendingTopP = (block as any).__pendingTopP
       if (pendingTopP !== null && pendingTopP !== undefined) {
         block.setFieldValue(String(pendingTopP), 'TOP_P')
@@ -164,7 +162,6 @@ function applyMaxTokensRow(block: Blockly.Block, show: boolean): void {
         .setAlign(Blockly.inputs.Align.RIGHT)
         .appendField('Max Tokens')
         .appendField(new FieldDeferredNumber(DEFAULT_MAX_TOKENS, 1, outputLimit, 1), 'MAX_TOKENS')
-      block.moveInputBefore('MAX_TOKENS_ROW', 'API_KEY_ROW')
       const pending = (block as any).__pendingMaxTokens
       if (pending !== null && pending !== undefined) {
         const clamped = Math.min(Number(pending), outputLimit)
@@ -195,7 +192,6 @@ function applyFreqPenaltyRow(block: Blockly.Block, show: boolean): void {
         .setAlign(Blockly.inputs.Align.RIGHT)
         .appendField('Freq Penalty')
         .appendField(new FieldDeferredSlider(0, 0, 2, 0.1), 'FREQ_PENALTY')
-      block.moveInputBefore('FREQ_PENALTY_ROW', 'API_KEY_ROW')
       const pending = (block as any).__pendingFreqPenalty
       if (pending !== null && pending !== undefined) {
         block.setFieldValue(String(pending), 'FREQ_PENALTY')
@@ -225,7 +221,6 @@ function applyPresPenaltyRow(block: Blockly.Block, show: boolean): void {
         .setAlign(Blockly.inputs.Align.RIGHT)
         .appendField('Pres Penalty')
         .appendField(new FieldDeferredSlider(0, 0, 2, 0.1), 'PRES_PENALTY')
-      block.moveInputBefore('PRES_PENALTY_ROW', 'API_KEY_ROW')
       const pending = (block as any).__pendingPresPenalty
       if (pending !== null && pending !== undefined) {
         block.setFieldValue(String(pending), 'PRES_PENALTY')
@@ -261,7 +256,6 @@ function applyReasoningEffortRow(block: Blockly.Block, show: boolean): void {
         .setAlign(Blockly.inputs.Align.RIGHT)
         .appendField('Reasoning')
         .appendField(new FieldDeferredDropdown(REASONING_EFFORT_OPTIONS), 'REASONING_EFFORT')
-      block.moveInputBefore('REASONING_EFFORT_ROW', 'API_KEY_ROW')
       const pending = (block as any).__pendingReasoningEffort
       if (pending !== null && pending !== undefined) {
         block.setFieldValue(String(pending), 'REASONING_EFFORT')
@@ -321,15 +315,7 @@ function rebuildModelRow(block: Blockly.Block, models: Array<[string, string]>):
         }),
         'MODEL',
       )
-    // Place MODEL_ROW before the first param row that exists
-    let firstParamRow = 'API_KEY_ROW'
-    if (block.getInput('TEMPERATURE_ROW'))
-      firstParamRow = 'TEMPERATURE_ROW'
-    else if (block.getInput('REASONING_EFFORT_ROW'))
-      firstParamRow = 'REASONING_EFFORT_ROW'
-    else if (block.getInput('MAX_TOKENS_ROW'))
-      firstParamRow = 'MAX_TOKENS_ROW'
-    block.moveInputBefore('MODEL_ROW', firstParamRow)
+    block.moveInputBefore('MODEL_ROW', 'API_KEY_ROW')
   }
   finally {
     Blockly.Events.enable()
