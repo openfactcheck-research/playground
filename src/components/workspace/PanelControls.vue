@@ -5,6 +5,7 @@ import { Lock, Puzzle, Snowflake } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import LanguageModelControls from './controls/LanguageModelControls.vue'
 import PromptTemplateControls from './controls/PromptTemplateControls.vue'
+import StructuredOutputControls from './controls/StructuredOutputControls.vue'
 import TextInputControls from './controls/TextInputControls.vue'
 
 const props = defineProps<{
@@ -51,6 +52,7 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="panelEl"
+    data-no-deselect
     class="pointer-events-auto w-[33vw] flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-lg"
     @pointerdown.stop
   >
@@ -61,8 +63,8 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Content -->
-    <div class="flex-1 min-h-0 overflow-auto p-4 flex flex-col">
-      <div v-if="selectedBlock" class="flex flex-1 flex-col">
+    <div class="flex-1 min-h-0 p-4 flex flex-col overflow-hidden">
+      <div v-if="selectedBlock" class="flex flex-1 flex-col min-h-0">
         <p class="mb-0.5 text-[11px] text-muted-foreground/70">
           Block Type
         </p>
@@ -81,6 +83,10 @@ onBeforeUnmount(() => {
         />
         <PromptTemplateControls
           v-else-if="selectedBlock.blockType === 'prompt_template' && resolvedBlock"
+          :block="resolvedBlock"
+        />
+        <StructuredOutputControls
+          v-else-if="selectedBlock.blockType === 'structured_output' && resolvedBlock"
           :block="resolvedBlock"
         />
       </div>

@@ -526,7 +526,12 @@ onMounted(() => {
   })
 })
 
-onBeforeUnmount(() => cleanup())
+const _onOpenControls = () => emit('openControls')
+onMounted(() => window.addEventListener('blockly:open-controls', _onOpenControls))
+onBeforeUnmount(() => {
+  window.removeEventListener('blockly:open-controls', _onOpenControls)
+  cleanup()
+})
 
 const { verboseMode } = useVerboseMode(() => props.projectId, () => props.workspaceId)
 

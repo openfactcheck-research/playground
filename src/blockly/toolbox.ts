@@ -83,6 +83,7 @@ const modelsAgentsCategory = category('Models & Agents', 'models_category', [
   block('agent'),
   block('language_model'),
   block('prompt_template'),
+  block('structured_output'),
 ])
 
 export const toolboxConfig = {
