@@ -75,8 +75,8 @@ export function register(): void {
         .appendField(new FieldTextPreview('Enter your prompt template...', 193), 'TEMPLATE_TEXT')
 
       this.setStyle('models_blocks')
-      this.setPreviousStatement(true, null)
-      this.setNextStatement(true, null)
+      this.setPreviousStatement(true, 'PromptTemplate')
+      this.setNextStatement(true, 'PromptTemplate')
     },
 
     onchange(this: Blockly.Block, e: Blockly.Events.Abstract) {

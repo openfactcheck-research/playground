@@ -80,6 +80,7 @@ const ioCategory = category('Input & Output', 'io_category', [
   block('text_input'),
 ])
 const modelsAgentsCategory = category('Models & Agents', 'models_category', [
+  block('agent'),
   block('language_model'),
   block('prompt_template'),
 ])

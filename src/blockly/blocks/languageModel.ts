@@ -378,8 +378,8 @@ export function register(): void {
         .appendField(new Blockly.FieldLabel(API_KEY_LABELS.openai), 'API_KEY_LABEL')
         .appendField(new FieldPasswordInput(''), 'API_KEY')
 
-      this.setPreviousStatement(true, null)
-      this.setNextStatement(true, null)
+      this.setPreviousStatement(true, 'LanguageModel')
+      this.setNextStatement(true, 'LanguageModel')
       this.setInputsInline(false)
       this.setStyle('models_blocks')
       this.setTooltip('Configure a language model')
