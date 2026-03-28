@@ -101,5 +101,14 @@ jobs:
       - name: Deploy infrastructure
         run: task deploy TARGET=production AUTO_APPROVE=true
 
+      - name: Fetch app config from SSM
+        run: |
+          aws ssm get-parameters-by-path \
+            --path /playground/production/ \
+            --with-decryption \
+            --query "Parameters[*].[Name,Value]" \
+            --output text | \
+          awk -F'\t' '{n=$1; sub(".*/","",n); print n"="$2}' > .env.production
+
       - name: Deploy app
         run: task app:deploy TARGET=production

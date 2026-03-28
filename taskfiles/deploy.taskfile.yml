@@ -10,7 +10,7 @@ vars:
 
   # Deployment Types
   ENVIRONMENT_DEPLOYS: base
-  ACCOUNT_DEPLOYS: ''
+  ACCOUNT_DEPLOYS: secrets
 
   # Binaries
   TF_BIN: tofu

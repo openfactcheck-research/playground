@@ -19,7 +19,8 @@ tasks:
     requires:
       vars: [TARGET]
     cmds:
-      - pnpm build
+      - pnpm exec vue-tsc -b
+      - pnpm exec vite build --mode {{.TARGET}}
       - |
         source taskfiles/deploy.helpers.sh 2>/dev/null || source ./taskfiles/deploy.helpers.sh
         prepare "{{.TARGET}}" "base" || exit 1

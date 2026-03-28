@@ -85,5 +85,14 @@ jobs:
       - name: Deploy infrastructure
         run: task deploy TARGET=integration AUTO_APPROVE=true
 
+      - name: Fetch app config from SSM
+        run: |
+          aws ssm get-parameters-by-path \
+            --path /playground/integration/ \
+            --with-decryption \
+            --query "Parameters[*].[Name,Value]" \
+            --output text | \
+          awk -F'\t' '{n=$1; sub(".*/","",n); print n"="$2}' > .env.integration
+
       - name: Deploy app
         run: task app:deploy TARGET=integration
