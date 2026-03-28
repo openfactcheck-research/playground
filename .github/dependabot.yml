@@ -14,7 +14,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    versioning-strategy: lockfile-only
     groups:
       npm:
         patterns:
           - '*'
+        update-types:
+          - minor
+          - patch
