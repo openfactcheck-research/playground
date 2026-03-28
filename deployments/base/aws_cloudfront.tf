@@ -2,7 +2,7 @@
 # CloudFront Distribution for SPA Hosting
 # ##############################################################################
 
-resource "aws_cloudfront_distribution" "ofc_playground" {
+resource "aws_cloudfront_distribution" "openfactcheck_playground" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
@@ -14,16 +14,16 @@ resource "aws_cloudfront_distribution" "ofc_playground" {
 
   # S3 Origin with Origin Access Control
   origin {
-    domain_name              = aws_s3_bucket.ofc_playground_website.bucket_regional_domain_name
-    origin_id                = "S3-${aws_s3_bucket.ofc_playground_website.id}"
-    origin_access_control_id = aws_cloudfront_origin_access_control.ofc_playground.id
+    domain_name              = aws_s3_bucket.openfactcheck_playground_website.bucket_regional_domain_name
+    origin_id                = "S3-${aws_s3_bucket.openfactcheck_playground_website.id}"
+    origin_access_control_id = aws_cloudfront_origin_access_control.openfactcheck_playground.id
   }
 
   # Default cache behavior
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
     cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "S3-${aws_s3_bucket.ofc_playground_website.id}"
+    target_origin_id       = "S3-${aws_s3_bucket.openfactcheck_playground_website.id}"
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
 
@@ -69,8 +69,8 @@ resource "aws_cloudfront_distribution" "ofc_playground" {
 # Origin Access Control - allows CloudFront to access private S3
 # ##############################################################################
 
-resource "aws_cloudfront_origin_access_control" "ofc_playground" {
-  name                              = "ofc-playground-oac-${terraform.workspace}"
+resource "aws_cloudfront_origin_access_control" "openfactcheck_playground" {
+  name                              = "openfactcheck-playground-oac-${terraform.workspace}"
   description                       = "OAC for OpenFactCheck Playground S3 bucket"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
