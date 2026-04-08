@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import { isAuthBypassed } from '@/lib/amplify'
 import DashboardPage from '@/pages/Dashboard.vue'
 import ForgotPasswordPage from '@/pages/ForgotPassword.vue'
 import LoginPage from '@/pages/Login.vue'
@@ -10,12 +11,14 @@ import WelcomePage from '@/pages/Welcome.vue'
 
 export const POST_LOGIN_ROUTE = { name: 'projects' } as const
 
+const AUTH_PAGE_NAMES = new Set(['login', 'signup', 'verify', 'forgot-password'])
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
       path: '/',
-      redirect: '/login',
+      redirect: isAuthBypassed ? '/projects' : '/login',
     },
     {
       path: '/login',
@@ -64,6 +67,13 @@ let authChecked = false
 router.beforeEach(async (to) => {
   const { isAuthenticated, isLoading, checkAuth } = useAuth()
 
+  // When auth is bypassed, redirect auth pages to projects
+  if (isAuthBypassed) {
+    if (AUTH_PAGE_NAMES.has(to.name as string))
+      return POST_LOGIN_ROUTE
+    return
+  }
+
   // Check auth status on first navigation
   if (!authChecked) {
     await checkAuth()
@@ -79,7 +89,7 @@ router.beforeEach(async (to) => {
     return { name: 'login' }
   }
 
-  if ((to.name === 'login' || to.name === 'signup' || to.name === 'forgot-password') && isAuthenticated.value) {
+  if (AUTH_PAGE_NAMES.has(to.name as string) && isAuthenticated.value) {
     return POST_LOGIN_ROUTE
   }
 })
