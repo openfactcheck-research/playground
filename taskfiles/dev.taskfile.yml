@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+tasks:
+  setup:
+    desc: Install dependencies and git hooks
+    cmds:
+      - task: sync
+      - pnpm prepare
+
+  sync:
+    desc: Sync dependencies
+    cmds:
+      - pnpm install
+
+  dev:
+    desc: Start development server
+    cmds:
+      - pnpm dev
+
+  build:
+    desc: Type-check and build for production
+    cmds:
+      - pnpm build
+
+  preview:
+    desc: Preview production build locally
+    cmds:
+      - pnpm preview
+
+  lint:
+    desc: Run all code quality checks
+    cmds:
+      - task: :print:info
+        vars:
+          MSG: Linting...
+      - pnpm lint
+      - printf '\n'
+      - task: :print:success
+        vars:
+          MSG: ✓ All checks passed
+
+  lint:fix:
+    desc: Run ESLint with auto-fix
+    cmds:
+      - pnpm lint:fix
+
+  version:
+    desc: Show current version
+    cmds:
+      - printf '{{.APP_VERSION}}\n'
+
+  clean:
+    desc: Remove build artifacts and node_modules
+    cmds:
+      - rm -rf dist node_modules .vite
+
+  default:
+    desc: Start development server
+    cmds:
+      - task: dev

@@ -13,14 +13,16 @@ includes:
   print:
     taskfile: ./taskfiles/common.taskfile.yml
     internal: true
+  setup:
+    taskfile: ./taskfiles/setup.taskfile.yml
   check:
     taskfile: ./taskfiles/check.taskfile.yml
   release:
     taskfile: ./taskfiles/release.taskfile.yml
   deploy:
     taskfile: ./taskfiles/deploy.taskfile.yml
-  app:
-    taskfile: ./taskfiles/app.taskfile.yml
+  dev:
+    taskfile: ./taskfiles/dev.taskfile.yml
 
 tasks:
   list:
@@ -35,13 +37,13 @@ tasks:
         printf '{{.COLOR_YELLOW}}Environment:{{.COLOR_RESET}} %s\n\n' "${ENV:-development}"
 
         printf '{{.COLOR_CYAN}}Namespaces{{.COLOR_RESET}}\n'
-        printf '  app      Frontend development (dev, build, lint)\n'
+        printf '  dev      Frontend development (dev, build, lint)\n'
         printf '  release  Release workflow (bumps version, tags, CI deploys)\n'
         printf '  deploy   Infrastructure (init, plan, apply, destroy)\n'
         printf '  check    Verify dependencies\n\n'
 
         printf '{{.COLOR_CYAN}}Examples{{.COLOR_RESET}}\n'
-        printf '  task app                           Start dev server\n'
+        printf '  task dev                           Start dev server\n'
         printf '  task deploy TARGET=<target>        Deploy infra changes\n\n'
 
         printf '{{.COLOR_YELLOW}}Run "task --list" for all tasks{{.COLOR_RESET}}\n'

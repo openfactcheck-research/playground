@@ -34,4 +34,4 @@ jobs:
         run: pnpm install
 
       - name: Lint
-        run: task app:lint
+        run: task dev:lint

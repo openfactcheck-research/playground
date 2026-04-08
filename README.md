@@ -55,7 +55,7 @@ pnpm install
 ### Start development server
 
 ```bash
-task app
+task dev
 ```
 
 ### Build for production
@@ -63,7 +63,7 @@ task app
 ```bash
 pnpm build
 # or with Task
-task app:build
+task dev:build
 ```
 
 ## Available Tasks
@@ -74,14 +74,15 @@ This project uses [Task](https://taskfile.dev/) as a task runner. Run `task --li
 
 | Task                | Description                             |
 | ------------------- | --------------------------------------- |
-| `task app`          | Start development server                |
-| `task app:dev`      | Start development server                |
-| `task app:build`    | Type-check and build for production     |
-| `task app:preview`  | Preview production build locally        |
-| `task app:lint`     | Run ESLint                              |
-| `task app:lint:fix` | Run ESLint with auto-fix                |
-| `task app:install`  | Install dependencies                    |
-| `task app:clean`    | Remove build artifacts and node_modules |
+| `task dev`          | Start development server                |
+| `task dev:setup`    | Install dependencies and git hooks      |
+| `task dev:sync`     | Sync dependencies                       |
+| `task dev:dev`      | Start development server                |
+| `task dev:build`    | Type-check and build for production     |
+| `task dev:preview`  | Preview production build locally        |
+| `task dev:lint`     | Run all code quality checks             |
+| `task dev:lint:fix` | Run ESLint with auto-fix                |
+| `task dev:clean`    | Remove build artifacts and node_modules |
 
 ### Infrastructure
 
@@ -93,7 +94,7 @@ This project uses [Task](https://taskfile.dev/) as a task runner. Run `task --li
 | `task deploy:apply TARGET=<target>`    | Apply infrastructure changes                     |
 | `task deploy:destroy TARGET=<target>`  | Destroy infrastructure                           |
 | `task deploy:validate TARGET=<target>` | Validate infrastructure configuration            |
-| `task app:deploy TARGET=<target>`      | Build and deploy to S3 + CloudFront              |
+| `task deploy:app TARGET=<target>`      | Build and deploy to S3 + CloudFront              |
 
 ### Infrastucture Workspaces
 
@@ -165,7 +166,7 @@ VITE_API_URL=http://localhost:8000
 
 4. Deploy the application:
    ```bash
-   task app:deploy TARGET=integration
+   task deploy:app TARGET=integration
    ```
 
 ### Available Environments

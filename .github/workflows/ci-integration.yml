@@ -34,7 +34,7 @@ jobs:
         run: pnpm install
 
       - name: Lint
-        run: task app:lint
+        run: task dev:lint
 
   deploy:
     name: Deploy to Integration
@@ -95,4 +95,4 @@ jobs:
           awk -F'\t' '{n=$1; sub(".*/","",n); print n"="$2}' > .env.integration
 
       - name: Deploy app
-        run: task app:deploy TARGET=integration
+        run: task deploy:app TARGET=integration
