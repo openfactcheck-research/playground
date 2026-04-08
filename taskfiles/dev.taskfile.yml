@@ -16,6 +16,8 @@ tasks:
 
   dev:
     desc: Start development server
+    env:
+      VITE_AUTH_BYPASS: 'true'
     cmds:
       - pnpm dev
 
