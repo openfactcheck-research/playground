@@ -26,6 +26,11 @@ variable "aws_account_name" {
 # ##############################################################################
 # Integration Environment
 # ##############################################################################
+variable "integration_vite_api_url" {
+  description = "API URL for integration"
+  type        = string
+}
+
 variable "integration_vite_cognito_user_pool_id" {
   description = "Cognito User Pool ID for integration"
   type        = string
@@ -41,6 +46,11 @@ variable "integration_vite_cognito_client_id" {
 # ##############################################################################
 # Production Environment
 # ##############################################################################
+variable "production_vite_api_url" {
+  description = "API URL for production"
+  type        = string
+}
+
 variable "production_vite_cognito_user_pool_id" {
   description = "Cognito User Pool ID for production"
   type        = string

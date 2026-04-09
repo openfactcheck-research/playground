@@ -4,6 +4,7 @@
 #
 # Requires a running API (local or cloud).
 # Set VITE_API_URL to point at your API.
+# Source files are bind-mounted — Vite HMR works in the container.
 
 services:
   app:
@@ -12,6 +13,9 @@ services:
       - '3001:3001'
     extra_hosts:
       - 'host.docker.internal:host-gateway'
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://host.docker.internal:8000}
       VITE_AUTH_BYPASS: ${VITE_AUTH_BYPASS:-true}

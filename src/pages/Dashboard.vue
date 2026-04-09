@@ -211,7 +211,7 @@ async function handleLogout() {
     <WelcomeTour ref="welcomeTourRef" />
     <Header :active-view="activeView" :can-add="canAddWorkspace(projectId)" :project-name="project?.name" @add-tab="handleAddTab" @rename-project="renameProject(projectId, $event)" />
     <WorkspaceTabs
-      v-if="tabs.length > 1"
+      v-if="tabs.length > 0"
       :tabs="tabs"
       :active-tab-id="activeTabId"
       @select="activeTabId = $event"
