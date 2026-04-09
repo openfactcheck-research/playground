@@ -1,5 +1,6 @@
+import type { StickyNote } from '@/types/projects'
 import { nanoid } from 'nanoid'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 
 // ---------------------------------------------------------------------------
 // Color palette
@@ -19,47 +20,20 @@ export const NOTE_COLORS = {
 
 export type NoteColor = keyof typeof NOTE_COLORS
 
-// ---------------------------------------------------------------------------
-// Data model
-// ---------------------------------------------------------------------------
-
-export type StickyNoteData = {
-  id: string
-  x: number
-  y: number
-  width: number
-  height: number
-  color: NoteColor
-  text: string
-}
-
-const STORAGE_PREFIX = 'workspace-notes'
-
-function storageKey(tabId: string): string {
-  return `${STORAGE_PREFIX}-${tabId}`
-}
+export type StickyNoteData = StickyNote & { color: NoteColor }
 
 // ---------------------------------------------------------------------------
 // Composable
 // ---------------------------------------------------------------------------
 
-export function useWorkspaceNotes(workspaceId: () => string) {
+export function useWorkspaceNotes(onSave: () => void) {
   const notes = ref<StickyNoteData[]>([])
 
-  function save(id?: string): void {
-    const key = storageKey(id ?? workspaceId())
-    localStorage.setItem(key, JSON.stringify(notes.value))
-  }
-
-  function load(id?: string): void {
-    const key = storageKey(id ?? workspaceId())
-    try {
-      const raw = localStorage.getItem(key)
-      notes.value = raw ? JSON.parse(raw) : []
-    }
-    catch {
-      notes.value = []
-    }
+  function loadNotes(data?: StickyNote[]): void {
+    notes.value = (data ?? []).map(n => ({
+      ...n,
+      color: (n.color in NOTE_COLORS ? n.color : 'yellow') as NoteColor,
+    }))
   }
 
   function addNote(wsX: number, wsY: number): string {
@@ -73,30 +47,22 @@ export function useWorkspaceNotes(workspaceId: () => string) {
       color: 'yellow',
       text: '',
     })
-    save()
+    onSave()
     return id
   }
 
   function deleteNote(id: string): void {
     notes.value = notes.value.filter(n => n.id !== id)
-    save()
+    onSave()
   }
 
   function updateNote(id: string, changes: Partial<StickyNoteData>): void {
     const note = notes.value.find(n => n.id === id)
     if (note) {
       Object.assign(note, changes)
-      save()
+      onSave()
     }
   }
 
-  // Tab switch: save old, load new
-  watch(workspaceId, (newId, oldId) => {
-    if (oldId) {
-      save(oldId)
-    }
-    load(newId)
-  })
-
-  return { notes, addNote, deleteNote, updateNote, save, load }
+  return { notes, loadNotes, addNote, deleteNote, updateNote }
 }

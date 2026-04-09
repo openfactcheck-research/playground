@@ -11,14 +11,15 @@ import Sidebar from '@/components/Sidebar.vue'
 import WelcomeTour from '@/components/WelcomeTour.vue'
 import BlocklyWorkspace from '@/components/workspace/BlocklyWorkspace.vue'
 import WorkspaceBottomControls from '@/components/workspace/BottomControls.vue'
-import DialogClear from '@/components/workspace/DialogClear.vue'
-import DialogExport from '@/components/workspace/DialogExport.vue'
-import DialogImport from '@/components/workspace/DialogImport.vue'
+import DialogClear from '@/components/workspace/dialogs/Clear.vue'
+import DialogExport from '@/components/workspace/dialogs/Export.vue'
+import DialogImport from '@/components/workspace/dialogs/Import.vue'
 import WorkspaceInspector from '@/components/workspace/Inspector.vue'
 import WorkspaceTabs from '@/components/workspace/Tabs.vue'
 import WorkspaceTopControls from '@/components/workspace/TopControls.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useProjects } from '@/composables/useProjects'
+import { useWorkspaceExportImport } from '@/composables/useWorkspaceExportImport'
 
 const route = useRoute()
 const router = useRouter()
@@ -112,81 +113,21 @@ function confirmClear() {
   clearDialogOpen.value = false
 }
 
-// Export
-const exportDialogOpen = ref(false)
-const exportFilename = ref('')
-let pendingExportData: object | null = null
-
-function handleExport() {
-  const state = blocklyRef.value?.getState()
-  if (!state)
-    return
-  const name = activeWorkspace.value?.name || 'Pipeline'
-  pendingExportData = {
-    version: 1,
-    name,
-    exportedAt: new Date().toISOString(),
-    workspace: state,
-  }
-  exportFilename.value = name.replace(/\s+/g, '-').toLowerCase()
-  exportDialogOpen.value = true
-}
-
-function confirmExport() {
-  if (!pendingExportData || !exportFilename.value.trim())
-    return
-  const json = JSON.stringify(pendingExportData, null, 2)
-  const blob = new Blob([json], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${exportFilename.value.trim().replace(/\.json$/i, '')}.json`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-  exportDialogOpen.value = false
-  pendingExportData = null
-}
-
-// Import
-const importDialogOpen = ref(false)
-const importFileName = ref('')
-let pendingImportData: { workspace: object, name?: string } | null = null
-
-function handleImportFile(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file)
-    return
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    try {
-      const data = JSON.parse(e.target?.result as string)
-      if (!data.workspace) {
-        // eslint-disable-next-line no-alert
-        alert('Invalid pipeline file: missing workspace data')
-        return
-      }
-      pendingImportData = data
-      importFileName.value = data.name || file.name.replace(/\.json$/i, '')
-      importDialogOpen.value = true
-    }
-    catch {
-      // eslint-disable-next-line no-alert
-      alert('Failed to import pipeline: invalid JSON')
-    }
-  }
-  reader.readAsText(file)
-  input.value = ''
-}
-
-function handleImportAction(_action: 'new-tab' | 'replace') {
-  if (!pendingImportData)
-    return
-  blocklyRef.value?.setState(pendingImportData.workspace as any)
-  pendingImportData = null
-}
+// Export / Import
+const {
+  exportDialogOpen,
+  exportFilename,
+  handleExport,
+  confirmExport,
+  importDialogOpen,
+  importFileName,
+  handleImportFile,
+  handleImportAction,
+} = useWorkspaceExportImport(
+  () => blocklyRef.value?.getState() ?? null,
+  (state: object) => blocklyRef.value?.setState(state),
+  () => activeWorkspace.value?.name || 'Pipeline',
+)
 
 function handleToggleLock() {
   blocklyRef.value?.toggleLock()

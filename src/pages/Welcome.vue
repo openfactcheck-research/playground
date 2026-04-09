@@ -1,28 +1,16 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useProjects } from '@/composables/useProjects'
+import { useTheme } from '@/composables/useTheme'
 
 const router = useRouter()
 const { user } = useAuth()
 const { createProject, createWorkspace } = useProjects(
   () => user.value?.userId ?? 'anonymous',
 )
-
-const isDark = ref(document.documentElement.classList.contains('dark'))
-let themeObserver: MutationObserver | null = null
-
-function checkTheme() {
-  isDark.value = document.documentElement.classList.contains('dark')
-}
-
-function toggleTheme() {
-  isDark.value = !isDark.value
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
-  document.documentElement.classList.toggle('dark', isDark.value)
-  document.documentElement.style.colorScheme = isDark.value ? 'dark' : 'light'
-}
+const { isDark, toggleTheme } = useTheme()
 
 const creating = ref(false)
 
@@ -40,16 +28,6 @@ async function createFirstProject() {
     creating.value = false
   }
 }
-
-onMounted(() => {
-  checkTheme()
-  themeObserver = new MutationObserver(checkTheme)
-  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-})
-
-onUnmounted(() => {
-  themeObserver?.disconnect()
-})
 </script>
 
 <template>

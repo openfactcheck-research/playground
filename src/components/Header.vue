@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Pencil, Plus } from 'lucide-vue-next'
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useTheme } from '@/composables/useTheme'
 
 const props = defineProps<{
   activeView: string
@@ -37,23 +38,7 @@ function finishEdit() {
   }
 }
 
-const isDark = ref(document.documentElement.classList.contains('dark'))
-let observer: MutationObserver | null = null
-
-function checkTheme() {
-  isDark.value = document.documentElement.classList.contains('dark')
-}
-
-onMounted(() => {
-  checkTheme()
-  // Watch for theme changes on document
-  observer = new MutationObserver(checkTheme)
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-})
-
-onUnmounted(() => {
-  observer?.disconnect()
-})
+const { isDark } = useTheme()
 </script>
 
 <template>

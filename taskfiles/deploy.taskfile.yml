@@ -224,7 +224,7 @@ tasks:
         printf '{{.COLOR_GREEN}}✓ Deployed to: %s{{.COLOR_RESET}}\n' "$WEBSITE_URL"
 
   default:
-    desc: Run the full infrastructure workflow (TARGET=<target>, optional DEP=<deployment>)
+    desc: Deploy infrastructure (TARGET=<target>, optional DEP=<deployment>)
     cmds:
       - task: _prepare
         vars: {TARGET: '{{.TARGET}}', DEP: '{{.DEP}}'}

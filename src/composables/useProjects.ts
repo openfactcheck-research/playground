@@ -1,4 +1,4 @@
-import type { Project, Workspace, WorkspaceSettings } from '@/types/projects'
+import type { Project, Workspace, WorkspaceContent, WorkspaceSettings } from '@/types/projects'
 import { computed, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import {
@@ -30,8 +30,8 @@ const workspacesCache = ref<Workspace[]>([])
 const projectsLoading = ref(false)
 const workspacesLoading = ref(false)
 
-// Track latest loadWorkspaces request to avoid races
-let workspacesLoadId = 0
+// Track latest loadWorkspaces request per project to avoid races
+const workspacesLoadIds = new Map<string, number>()
 
 // ---------------------------------------------------------------------------
 // Composable
@@ -89,12 +89,12 @@ export function useProjects(_userId: () => string) {
   }
 
   async function loadWorkspaces(projectId: string): Promise<void> {
-    const requestId = ++workspacesLoadId
+    const requestId = (workspacesLoadIds.get(projectId) ?? 0) + 1
+    workspacesLoadIds.set(projectId, requestId)
     workspacesLoading.value = true
     try {
       const ws = await fetchWorkspaces(projectId)
-      // Only apply if this is still the latest request
-      if (requestId !== workspacesLoadId)
+      if (requestId !== workspacesLoadIds.get(projectId))
         return
       workspacesCache.value = [
         ...workspacesCache.value.filter(w => w.projectId !== projectId),
@@ -102,11 +102,11 @@ export function useProjects(_userId: () => string) {
       ]
     }
     catch {
-      if (requestId === workspacesLoadId)
+      if (requestId === workspacesLoadIds.get(projectId))
         toast.error('Failed to load workspaces')
     }
     finally {
-      if (requestId === workspacesLoadId)
+      if (requestId === workspacesLoadIds.get(projectId))
         workspacesLoading.value = false
     }
   }
@@ -115,9 +115,9 @@ export function useProjects(_userId: () => string) {
   // Mutations
   // =========================================================================
 
-  async function createProject(name: string): Promise<Project> {
+  async function createProject(name: string, description = ''): Promise<Project> {
     try {
-      const project = await createProjectApi(name)
+      const project = await createProjectApi(name, description)
       projectsCache.value.push(project)
       return project
     }
@@ -128,27 +128,33 @@ export function useProjects(_userId: () => string) {
   }
 
   async function renameProject(projectId: string, name: string): Promise<void> {
+    return updateProject(projectId, { name })
+  }
+
+  async function updateProject(projectId: string, fields: { name?: string, description?: string }): Promise<void> {
     const prev = projectsCache.value.find(p => p.id === projectId)
-    const prevName = prev?.name
-    if (prev)
-      prev.name = name
+    const snapshot = prev ? { ...prev } : undefined
+
+    if (prev) {
+      if (fields.name !== undefined)
+        prev.name = fields.name
+      if (fields.description !== undefined)
+        prev.description = fields.description
+    }
 
     try {
-      const updated = await updateProjectApi(projectId, { name })
-      if (prev) {
-        prev.name = updated.name
-        prev.updatedAt = updated.updatedAt
-      }
+      const updated = await updateProjectApi(projectId, fields)
+      if (prev)
+        Object.assign(prev, updated)
     }
     catch {
-      if (prev && prevName !== undefined)
-        prev.name = prevName
-      toast.error('Failed to rename project')
+      if (prev && snapshot)
+        Object.assign(prev, snapshot)
+      toast.error('Failed to update project')
     }
   }
 
   async function deleteProject(projectId: string): Promise<void> {
-    const wsToRemove = workspacesCache.value.filter(w => w.projectId === projectId)
     const prevProjects = [...projectsCache.value]
     const prevWorkspaces = [...workspacesCache.value]
     projectsCache.value = projectsCache.value.filter(p => p.id !== projectId)
@@ -156,11 +162,6 @@ export function useProjects(_userId: () => string) {
 
     try {
       await deleteProjectApi(projectId)
-      // Clean up localStorage only after API confirms
-      for (const ws of wsToRemove) {
-        localStorage.removeItem(`blockly-workspace-state-${ws.id}`)
-        localStorage.removeItem(`workspace-notes-${ws.id}`)
-      }
     }
     catch {
       projectsCache.value = prevProjects
@@ -169,14 +170,14 @@ export function useProjects(_userId: () => string) {
     }
   }
 
-  async function createWorkspace(projectId: string, name: string): Promise<Workspace | null> {
+  async function createWorkspace(projectId: string, name: string, description = ''): Promise<Workspace | null> {
     if (!canAddWorkspace(projectId)) {
       toast.error('Workspace limit reached')
       return null
     }
 
     try {
-      const ws = await createWorkspaceApi(projectId, name)
+      const ws = await createWorkspaceApi(projectId, name, description)
       workspacesCache.value.push(ws)
       return ws
     }
@@ -221,13 +222,6 @@ export function useProjects(_userId: () => string) {
     try {
       const ws = await duplicateWorkspaceApi(projectId, workspaceId)
       workspacesCache.value.push(ws)
-      // Copy local state to the new workspace
-      const blocklyState = localStorage.getItem(`blockly-workspace-state-${workspaceId}`)
-      if (blocklyState)
-        localStorage.setItem(`blockly-workspace-state-${ws.id}`, blocklyState)
-      const notes = localStorage.getItem(`workspace-notes-${workspaceId}`)
-      if (notes)
-        localStorage.setItem(`workspace-notes-${ws.id}`, notes)
       return ws
     }
     catch {
@@ -242,9 +236,6 @@ export function useProjects(_userId: () => string) {
 
     try {
       await deleteWorkspaceApi(projectId, workspaceId)
-      // Clean up localStorage only after API confirms
-      localStorage.removeItem(`blockly-workspace-state-${workspaceId}`)
-      localStorage.removeItem(`workspace-notes-${workspaceId}`)
     }
     catch {
       workspacesCache.value = prevWorkspaces
@@ -269,6 +260,21 @@ export function useProjects(_userId: () => string) {
     }
   }
 
+  async function saveWorkspaceContent(projectId: string, workspaceId: string, content: WorkspaceContent): Promise<void> {
+    const ws = workspacesCache.value.find(w => w.id === workspaceId && w.projectId === projectId)
+    const prev = ws?.content
+    if (ws)
+      ws.content = content
+    try {
+      await updateWorkspaceApi(projectId, workspaceId, { content })
+    }
+    catch {
+      if (ws)
+        ws.content = prev
+      toast.error('Failed to save workspace content')
+    }
+  }
+
   return {
     projects,
     projectsLoading,
@@ -282,6 +288,7 @@ export function useProjects(_userId: () => string) {
     loadWorkspaces,
     createProject,
     renameProject,
+    updateProject,
     deleteProject,
     createWorkspace,
     renameWorkspace,
@@ -289,5 +296,6 @@ export function useProjects(_userId: () => string) {
     duplicateWorkspace,
     deleteWorkspace,
     reorderWorkspaces,
+    saveWorkspaceContent,
   }
 }

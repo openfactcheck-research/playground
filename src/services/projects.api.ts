@@ -15,11 +15,11 @@ export function fetchProject(id: string): Promise<Project> {
   return apiRequest<Project>('GET', `${BASE}/${id}`)
 }
 
-export function createProjectApi(name: string): Promise<Project> {
-  return apiRequest<Project>('POST', BASE, { name })
+export function createProjectApi(name: string, description = ''): Promise<Project> {
+  return apiRequest<Project>('POST', BASE, { name, description })
 }
 
-export function updateProjectApi(id: string, fields: { name?: string }): Promise<Project> {
+export function updateProjectApi(id: string, fields: { name?: string, description?: string }): Promise<Project> {
   return apiRequest<Project>('PATCH', `${BASE}/${id}`, fields)
 }
 

@@ -2,7 +2,7 @@
  * Workspace API service — calls /api/v1/projects/{pid}/workspaces endpoints.
  */
 
-import type { Workspace, WorkspaceSettings } from '@/types/projects'
+import type { Workspace, WorkspaceContent, WorkspaceSettings } from '@/types/projects'
 import { apiRequest } from '@/lib/api-client'
 
 function base(projectId: string): string {
@@ -17,14 +17,14 @@ export function fetchWorkspace(projectId: string, workspaceId: string): Promise<
   return apiRequest<Workspace>('GET', `${base(projectId)}/${workspaceId}`)
 }
 
-export function createWorkspaceApi(projectId: string, name: string): Promise<Workspace> {
-  return apiRequest<Workspace>('POST', base(projectId), { name })
+export function createWorkspaceApi(projectId: string, name: string, description = ''): Promise<Workspace> {
+  return apiRequest<Workspace>('POST', base(projectId), { name, description })
 }
 
 export function updateWorkspaceApi(
   projectId: string,
   workspaceId: string,
-  fields: { name?: string, description?: string, locked?: boolean, settings?: WorkspaceSettings },
+  fields: { name?: string, description?: string, locked?: boolean, settings?: WorkspaceSettings, content?: WorkspaceContent },
 ): Promise<Workspace> {
   return apiRequest<Workspace>('PATCH', `${base(projectId)}/${workspaceId}`, fields)
 }

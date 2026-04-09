@@ -17,8 +17,10 @@ import BlocklyToolbar from '@/components/workspace/BlockToolbar.vue'
 import BlocklyContextMenu from '@/components/workspace/ContextMenu.vue'
 import NoteToolbar from '@/components/workspace/NoteToolbar.vue'
 import StickyNote from '@/components/workspace/StickyNote.vue'
+import { useAuth } from '@/composables/useAuth'
 import { useBlockTooltip } from '@/composables/useBlockTooltip'
 import { useContextMenu } from '@/composables/useContextMenu'
+import { useProjects } from '@/composables/useProjects'
 import { useToolbox } from '@/composables/useToolbox'
 import { useVerboseMode } from '@/composables/useVerboseMode'
 import { useWorkspaceClipboard } from '@/composables/useWorkspaceClipboard'
@@ -67,13 +69,52 @@ let _workspace: Blockly.WorkspaceSvg | null = null
 let _zoomToFit: ZoomToFitControl | null = null
 let _resizeObserver: ResizeObserver | null = null
 let _themeObserver: MutationObserver | null = null
+
+// --- API content persistence ---
+const { user } = useAuth()
+const { getWorkspace: getWsFromCache, saveWorkspaceContent } = useProjects(
+  () => user.value?.userId ?? 'anonymous',
+)
+
+const _notesContainer = { get: (): import('@/types/projects').StickyNote[] => [] }
+
+let _saveTimer: ReturnType<typeof setTimeout> | null = null
+let _dirty = false
+const SAVE_DEBOUNCE_MS = 10_000
+
+function debouncedSave(): void {
+  _dirty = true
+  if (_saveTimer)
+    clearTimeout(_saveTimer)
+  _saveTimer = setTimeout(() => flushSave(), SAVE_DEBOUNCE_MS)
+}
+
+function flushSave(): void {
+  if (_saveTimer) {
+    clearTimeout(_saveTimer)
+    _saveTimer = null
+  }
+  if (!_dirty)
+    return
+  _dirty = false
+  const workspace = _workspace
+  if (!workspace)
+    return
+  try {
+    const blockly = Blockly.serialization.workspaces.save(workspace)
+    saveWorkspaceContent(props.projectId, currentWorkspaceId, { blockly, notes: _notesContainer.get() })
+  }
+  catch {
+    // Ignore serialization errors
+  }
+}
 let _tooltipCleanup: (() => void) | null = null
 
 // --- Composables ---
 const { saveWorkspace, loadWorkspace, getState: getBlocklyState, setState: setBlocklyState } = useWorkspacePersistence(
   () => _workspace,
-  () => currentWorkspaceId,
   () => generateCode(),
+  () => debouncedSave(),
 )
 
 const { copySelectedBlocks, pasteBlocks, hasSelectedBlocks, hasClipboardData } = useWorkspaceClipboard(
@@ -120,7 +161,8 @@ let _selectedBlockId: string | null = null
 const notesCanvasRef = ref<HTMLElement>()
 const currentScale = ref(1)
 const selectedNoteId = ref<string | null>(null)
-const { notes, addNote: createNote, deleteNote, updateNote, save: saveNotes, load: loadNotes } = useWorkspaceNotes(() => currentWorkspaceId)
+const { notes, loadNotes, addNote: createNote, deleteNote, updateNote } = useWorkspaceNotes(() => debouncedSave())
+_notesContainer.get = () => notes.value
 
 // --- Note toolbar state ---
 const noteToolbarVisible = ref(false)
@@ -161,9 +203,8 @@ function clearWorkspace(): void {
   if (!_workspace)
     return
   _workspace.clear()
-  localStorage.removeItem(`blockly-workspace-state-${currentWorkspaceId}`)
   notes.value = []
-  saveNotes()
+  flushSave()
   selectedNoteId.value = null
   closeNoteToolbar()
   emit('codeChange', '')
@@ -414,8 +455,7 @@ function cleanup() {
   _zoomToFit?.dispose()
   _zoomToFit = null
   if (_workspace) {
-    saveWorkspace()
-    saveNotes()
+    flushSave()
     _workspace.dispose()
     _workspace = null
   }
@@ -424,13 +464,15 @@ function cleanup() {
 watch(() => props.workspaceId, (newId, oldId) => {
   if (!_workspace || newId === oldId)
     return
-  saveWorkspace(oldId)
-  saveNotes(oldId)
+  // Flush save for old workspace
+  flushSave()
   selectedNoteId.value = null
   closeNoteToolbar()
   currentWorkspaceId = newId
-  loadWorkspace(newId)
-  loadNotes(newId)
+  // Load new workspace content from API cache
+  const ws = getWsFromCache(props.projectId, newId)
+  loadWorkspace(ws?.content?.blockly)
+  loadNotes(ws?.content?.notes)
   applyVerboseToAll()
   generateCode()
   requestAnimationFrame(() => updateNotesTransform())
@@ -687,8 +729,10 @@ onMounted(() => {
 
   Blockly.svgResize(_workspace)
   currentWorkspaceId = props.workspaceId
-  loadWorkspace()
-  loadNotes()
+  // Load content from API cache
+  const ws = getWsFromCache(props.projectId, props.workspaceId)
+  loadWorkspace(ws?.content?.blockly)
+  loadNotes(ws?.content?.notes)
   generateCode()
   requestAnimationFrame(() => updateNotesTransform())
 
@@ -758,7 +802,7 @@ defineExpose({
     }
     if (data?.notes) {
       notes.value = data.notes
-      saveNotes()
+      flushSave()
     }
   },
   copySelectedBlocks,

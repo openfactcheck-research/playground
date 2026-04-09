@@ -108,9 +108,10 @@ export async function apiRequest<T>(method: HttpMethod, path: string, body?: unk
 
   const url = `${BASE_URL}${path}`
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  }
+  const headers: Record<string, string> = {}
+
+  if (body !== undefined)
+    headers['Content-Type'] = 'application/json'
 
   const token = await getAuthToken()
   if (token)

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { AppWindow, CircleHelp, LogOut, Moon, Settings, Sun } from 'lucide-vue-next'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { ref } from 'vue'
 import { useAuth } from '@/composables/useAuth'
+import { useClickOutside } from '@/composables/useClickOutside'
+import { useTheme } from '@/composables/useTheme'
 
 defineProps<{
   activeView: string
@@ -13,45 +15,15 @@ defineEmits<{
   help: []
 }>()
 
-const isDark = ref(document.documentElement.classList.contains('dark'))
+const { isDark, toggleTheme } = useTheme()
 const hoveredId = ref<string | null>(null)
-
-onMounted(() => {
-  document.addEventListener('click', handleOutsideClick)
-  const stored = localStorage.getItem('theme')
-  if (stored) {
-    isDark.value = stored === 'dark'
-  }
-  else {
-    isDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches
-  }
-  applyTheme()
-})
-
-function toggleTheme() {
-  isDark.value = !isDark.value
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
-  applyTheme()
-}
-
-function applyTheme() {
-  document.documentElement.classList.toggle('dark', isDark.value)
-  document.documentElement.style.colorScheme = isDark.value ? 'dark' : 'light'
-}
 
 const { user } = useAuth()
 const showUserMenu = ref(false)
 const userMenuRef = ref<HTMLElement | null>(null)
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleOutsideClick)
+useClickOutside(userMenuRef, () => {
+  showUserMenu.value = false
 })
-
-function handleOutsideClick(event: MouseEvent) {
-  if (userMenuRef.value && !userMenuRef.value.contains(event.target as Node)) {
-    showUserMenu.value = false
-  }
-}
 
 const topNavItems = [
   { id: 'workspace', label: 'Workspace', icon: AppWindow },

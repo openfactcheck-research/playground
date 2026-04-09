@@ -17,19 +17,22 @@ const props = defineProps<{
   description?: string
   label?: string
   placeholder?: string
+  showDescription?: boolean
 }>()
 
 const emit = defineEmits<{
-  confirm: [name: string]
+  confirm: [name: string, description: string]
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
 const name = ref('')
+const desc = ref('')
 const inputRef = ref<InstanceType<typeof Input> | null>(null)
 
 watch(open, (val) => {
   if (val) {
     name.value = ''
+    desc.value = ''
     nextTick(() => {
       (inputRef.value?.$el as HTMLInputElement)?.focus()
     })
@@ -40,7 +43,7 @@ function submit() {
   const trimmed = name.value.trim()
   if (!trimmed)
     return
-  emit('confirm', trimmed)
+  emit('confirm', trimmed, desc.value.trim())
   open.value = false
 }
 </script>
@@ -62,6 +65,15 @@ function submit() {
             v-model="name"
             :placeholder="props.placeholder || 'Enter a name...'"
             @keydown.enter="submit"
+          />
+        </div>
+        <div v-if="props.showDescription" class="grid gap-2">
+          <Label>Description</Label>
+          <textarea
+            v-model="desc"
+            rows="2"
+            class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            placeholder="Optional description..."
           />
         </div>
       </div>

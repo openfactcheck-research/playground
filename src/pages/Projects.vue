@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import DialogNamePrompt from '@/components/DialogNamePrompt.vue'
+import ConfirmDelete from '@/components/dialogs/ConfirmDelete.vue'
+import DialogCreate from '@/components/dialogs/Create.vue'
+import EditProject from '@/components/dialogs/EditProject.vue'
+import EditWorkspace from '@/components/dialogs/EditWorkspace.vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,80 +13,56 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/composables/useAuth'
+import { useClickOutside } from '@/composables/useClickOutside'
 import { useProjects } from '@/composables/useProjects'
+import { useTheme } from '@/composables/useTheme'
 
 const now = ref(Date.now())
 let tickInterval: ReturnType<typeof setInterval> | null = null
 
 const router = useRouter()
 const { user, signOut } = useAuth()
-const { projects, projectsLoading, getProject, createProject, renameProject, deleteProject, getWorkspaces, createWorkspace, updateWorkspace, duplicateWorkspace, deleteWorkspace, loadProjects, loadWorkspaces, clearCache } = useProjects(
+const { projects, projectsLoading, workspacesLoading, getProject, createProject, updateProject, deleteProject, getWorkspaces, createWorkspace, updateWorkspace, duplicateWorkspace, deleteWorkspace, loadProjects, loadWorkspaces, clearCache } = useProjects(
   () => user.value?.userId ?? 'anonymous',
 )
 
-// Theme
-const isDark = ref(document.documentElement.classList.contains('dark'))
-let themeObserver: MutationObserver | null = null
-
-function toggleTheme() {
-  isDark.value = !isDark.value
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
-  document.documentElement.classList.toggle('dark', isDark.value)
-  document.documentElement.style.colorScheme = isDark.value ? 'dark' : 'light'
-}
-
-onMounted(() => {
-  themeObserver = new MutationObserver(() => {
-    isDark.value = document.documentElement.classList.contains('dark')
-  })
-  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-})
-
-onUnmounted(() => {
-  themeObserver?.disconnect()
-})
+const { isDark, toggleTheme } = useTheme()
 
 const selectedProjectId = ref(projects.value[0]?.id ?? '')
 const searchQuery = ref('')
-const viewMode = ref<'list' | 'grid'>('list')
 const showUserMenu = ref(false)
 const userMenuRef = ref<HTMLElement | null>(null)
+useClickOutside(userMenuRef, () => {
+  showUserMenu.value = false
+})
 
-// Project inline rename
-const projRenameId = ref<string | null>(null)
-const projRenameName = ref('')
-const projRenameInputRef = ref<HTMLInputElement | null>(null)
+// Delete confirmation
+const deleteDialogOpen = ref(false)
+const deleteDialogTitle = ref('')
+const deleteDialogDescription = ref('')
+let pendingDeleteAction: (() => Promise<void>) | null = null
 
-function startProjRename(projId: string, currentName: string) {
-  projRenameId.value = projId
-  projRenameName.value = currentName
-  setTimeout(() => projRenameInputRef.value?.focus(), 0)
-}
-
-async function finishProjRename() {
-  if (projRenameId.value && projRenameName.value.trim()) {
-    await renameProject(projRenameId.value, projRenameName.value.trim())
+function confirmDeleteProject(projId: string) {
+  const project = getProject(projId)
+  deleteDialogTitle.value = 'Delete Project'
+  deleteDialogDescription.value = `Delete "${project?.name ?? 'this project'}" and all its workspaces? This cannot be undone.`
+  pendingDeleteAction = async () => {
+    const wasSelected = selectedProjectId.value === projId
+    await deleteProject(projId)
+    if (wasSelected)
+      selectedProjectId.value = projects.value[0]?.id ?? ''
   }
-  projRenameId.value = null
-  projRenameName.value = ''
-}
-
-async function handleDeleteProject(projId: string) {
-  const wasSelected = selectedProjectId.value === projId
-  await deleteProject(projId)
-  if (wasSelected) {
-    selectedProjectId.value = projects.value[0]?.id ?? ''
-  }
+  deleteDialogOpen.value = true
 }
 
 function handleExportProject(projId: string) {
   const project = getProject(projId)
   if (!project)
     return
-  const workspaces = getWorkspaces(projId).map((ws) => {
-    const blocklyState = localStorage.getItem(`blockly-workspace-state-${ws.id}`)
-    return { ...ws, blocklyState: blocklyState ? JSON.parse(blocklyState) : null }
-  })
+  const workspaces = getWorkspaces(projId).map(ws => ({
+    ...ws,
+    blocklyState: ws.content?.blockly ?? null,
+  }))
   const data = { version: 1, project, workspaces, exportedAt: new Date().toISOString() }
   const json = JSON.stringify(data, null, 2)
   const blob = new Blob([json], { type: 'application/json' })
@@ -98,40 +77,60 @@ function handleExportProject(projId: string) {
 }
 
 // Edit details dialog
-const editDialogOpen = ref(false)
+// Workspace edit dialog
+const editWsDialogOpen = ref(false)
 const editWsId = ref('')
-const editName = ref('')
-const editDescription = ref('')
-const editLocked = ref(false)
+const editWsData = ref({ name: '', description: '', locked: false })
 
 function openEditDialog(wsId: string) {
   const ws = getWorkspaces(selectedProjectId.value).find(w => w.id === wsId)
   if (!ws)
     return
   editWsId.value = wsId
-  editName.value = ws.name
-  editDescription.value = ws.description ?? ''
-  editLocked.value = ws.locked ?? false
-  editDialogOpen.value = true
+  editWsData.value = { name: ws.name, description: ws.description ?? '', locked: ws.locked ?? false }
+  editWsDialogOpen.value = true
 }
 
-async function saveEditDialog() {
-  if (!editWsId.value || !editName.value.trim())
+async function saveEditDialog(name: string, description: string, locked: boolean) {
+  await updateWorkspace(selectedProjectId.value, editWsId.value, { name, description, locked })
+}
+
+// Project edit dialog
+const projEditOpen = ref(false)
+const projEditId = ref('')
+const projEditData = ref({ name: '', description: '' })
+
+function openProjEditDialog(projId: string) {
+  const proj = getProject(projId)
+  if (!proj)
     return
-  await updateWorkspace(selectedProjectId.value, editWsId.value, {
-    name: editName.value.trim(),
-    description: editDescription.value,
-    locked: editLocked.value,
-  })
-  editDialogOpen.value = false
+  projEditId.value = projId
+  projEditData.value = { name: proj.name, description: proj.description ?? '' }
+  projEditOpen.value = true
+}
+
+async function saveProjEditDialog(name: string, description: string) {
+  await updateProject(projEditId.value, { name, description })
 }
 
 async function handleDuplicate(wsId: string) {
   await duplicateWorkspace(selectedProjectId.value, wsId)
 }
 
-async function handleDelete(wsId: string) {
-  await deleteWorkspace(selectedProjectId.value, wsId)
+function confirmDeleteWorkspace(wsId: string) {
+  deleteDialogTitle.value = 'Delete Workspace'
+  deleteDialogDescription.value = 'Delete this workspace? This cannot be undone.'
+  pendingDeleteAction = async () => {
+    await deleteWorkspace(selectedProjectId.value, wsId)
+  }
+  deleteDialogOpen.value = true
+}
+
+async function executeDelete() {
+  if (pendingDeleteAction) {
+    await pendingDeleteAction()
+    pendingDeleteAction = null
+  }
 }
 
 const selectedProject = computed(() => getProject(selectedProjectId.value))
@@ -170,15 +169,15 @@ function formatTimeAgo(dateStr: string): string {
 const newProjectOpen = ref(false)
 const newWorkspaceOpen = ref(false)
 
-async function handleCreateProject(name: string) {
-  const project = await createProject(name)
+async function handleCreateProject(name: string, description: string) {
+  const project = await createProject(name, description)
   selectedProjectId.value = project.id
 }
 
-async function handleCreateWorkspace(name: string) {
+async function handleCreateWorkspace(name: string, description: string) {
   if (!selectedProjectId.value)
     return
-  await createWorkspace(selectedProjectId.value, name)
+  await createWorkspace(selectedProjectId.value, name, description)
 }
 
 function openWorkspace(workspaceId: string) {
@@ -189,12 +188,6 @@ async function handleLogout() {
   await signOut()
   clearCache()
   router.push('/login')
-}
-
-function handleOutsideClick(event: MouseEvent) {
-  if (userMenuRef.value && !userMenuRef.value.contains(event.target as Node)) {
-    showUserMenu.value = false
-  }
 }
 
 // Redirect to welcome page when no projects exist (wait for load to finish)
@@ -210,7 +203,6 @@ watch(selectedProjectId, (pid) => {
 }, { immediate: true })
 
 onMounted(async () => {
-  document.addEventListener('click', handleOutsideClick)
   tickInterval = setInterval(() => {
     now.value = Date.now()
   }, 30000)
@@ -221,7 +213,6 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleOutsideClick)
   if (tickInterval)
     clearInterval(tickInterval)
 })
@@ -243,16 +234,6 @@ onUnmounted(() => {
         <div class="flex items-center gap-1">
           <button
             class="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            aria-label="Import project"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-          </button>
-          <button
-            class="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             aria-label="New project"
             @click="newProjectOpen = true"
           >
@@ -265,6 +246,13 @@ onUnmounted(() => {
 
       <!-- Project list -->
       <nav class="flex-1 overflow-y-auto p-2">
+        <!-- Skeleton loading -->
+        <template v-if="projectsLoading && projects.length === 0">
+          <div v-for="i in 3" :key="i" class="flex items-center rounded-lg px-3 py-2">
+            <div class="h-4 w-32 animate-pulse rounded bg-secondary" />
+          </div>
+        </template>
+
         <div
           v-for="project in projects"
           :key="project.id"
@@ -274,18 +262,7 @@ onUnmounted(() => {
             : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'"
           @click="selectedProjectId = project.id"
         >
-          <!-- Inline rename or project name -->
-          <input
-            v-if="projRenameId === project.id"
-            ref="projRenameInputRef"
-            v-model="projRenameName"
-            class="w-full truncate rounded border border-border bg-background px-1 py-0.5 text-sm outline-none focus:border-primary"
-            @blur="finishProjRename"
-            @keydown.enter="finishProjRename"
-            @keydown.escape="projRenameId = null"
-            @click.stop
-          >
-          <span v-else class="truncate">{{ project.name }}</span>
+          <span class="truncate">{{ project.name }}</span>
 
           <div class="relative">
             <DropdownMenu>
@@ -301,16 +278,16 @@ onUnmounted(() => {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" side="right" class="min-w-40">
-                <DropdownMenuItem @click="startProjRename(project.id, project.name)">
+                <DropdownMenuItem @click="openProjEditDialog(project.id)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
-                  Rename
+                  Edit details
                 </DropdownMenuItem>
                 <DropdownMenuItem @click="handleExportProject(project.id)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                   Export
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" @click="handleDeleteProject(project.id)">
+                <DropdownMenuItem variant="destructive" @click="confirmDeleteProject(project.id)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                   Delete
                 </DropdownMenuItem>
@@ -383,9 +360,14 @@ onUnmounted(() => {
     <main class="flex flex-1 flex-col overflow-hidden">
       <!-- Project header -->
       <header class="flex h-14 items-center border-b border-border px-6">
-        <h1 class="text-lg font-semibold">
-          {{ selectedProject?.name }}
-        </h1>
+        <div>
+          <h1 class="text-lg font-semibold">
+            {{ selectedProject?.name }}
+          </h1>
+          <p v-if="selectedProject?.description" class="text-xs text-muted-foreground">
+            {{ selectedProject.description }}
+          </p>
+        </div>
       </header>
 
       <!-- Tabs -->
@@ -411,28 +393,6 @@ onUnmounted(() => {
           >
         </div>
 
-        <div class="flex rounded-md border border-border">
-          <button
-            class="flex h-8 w-8 items-center justify-center transition-colors"
-            :class="viewMode === 'list' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground'"
-            @click="viewMode = 'list'"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-          <button
-            class="flex h-8 w-8 items-center justify-center border-l border-border transition-colors"
-            :class="viewMode === 'grid' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground'"
-            @click="viewMode = 'grid'"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
-            </svg>
-          </button>
-        </div>
-
         <div class="flex-1" />
 
         <button
@@ -448,8 +408,19 @@ onUnmounted(() => {
 
       <!-- Flow list -->
       <div class="flex-1 overflow-y-auto px-6">
+        <!-- Skeleton loading -->
+        <div v-if="workspacesLoading && filteredWorkspaces.length === 0" class="flex flex-col">
+          <div v-for="i in 3" :key="i" class="flex items-center gap-3 px-3 py-3">
+            <div class="h-9 w-9 shrink-0 animate-pulse rounded-lg bg-secondary" />
+            <div class="flex-1 space-y-2">
+              <div class="h-4 w-40 animate-pulse rounded bg-secondary" />
+              <div class="h-3 w-24 animate-pulse rounded bg-secondary" />
+            </div>
+          </div>
+        </div>
+
         <!-- List view -->
-        <div v-if="viewMode === 'list'" class="flex flex-col">
+        <div class="flex flex-col">
           <div
             v-for="ws in filteredWorkspaces"
             :key="ws.id"
@@ -487,16 +458,12 @@ onUnmounted(() => {
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
                   Edit details
                 </DropdownMenuItem>
-                <DropdownMenuItem @click="openWorkspace(ws.id)">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-                  Export
-                </DropdownMenuItem>
                 <DropdownMenuItem @click="handleDuplicate(ws.id)">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
                   Duplicate
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" @click="handleDelete(ws.id)">
+                <DropdownMenuItem variant="destructive" @click="confirmDeleteWorkspace(ws.id)">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                   Delete
                 </DropdownMenuItem>
@@ -505,68 +472,8 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- Grid view -->
-        <div v-else class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          <div
-            v-for="ws in filteredWorkspaces"
-            :key="ws.id"
-            class="group flex flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-foreground/20 hover:bg-secondary/30 cursor-pointer"
-            @click="openWorkspace(ws.id)"
-          >
-            <div class="flex items-center justify-between">
-              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-fuchsia-500/20 to-orange-400/20">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-fuchsia-400">
-                  <path d="M12 3v4m0 14v-4m9-5h-4M7 12H3m15.364-6.364-2.828 2.828M9.464 14.536l-2.828 2.828m12.728 0-2.828-2.828M9.464 9.464 6.636 6.636" />
-                </svg>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <button
-                    class="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-secondary hover:text-foreground"
-                    @click.stop
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" />
-                    </svg>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" class="min-w-44">
-                  <DropdownMenuItem @click="openEditDialog(ws.id)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
-                    Edit details
-                  </DropdownMenuItem>
-                  <DropdownMenuItem @click="openWorkspace(ws.id)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-                    Export
-                  </DropdownMenuItem>
-                  <DropdownMenuItem @click="handleDuplicate(ws.id)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-                    Duplicate
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem variant="destructive" @click="handleDelete(ws.id)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-foreground">
-                {{ ws.name }}
-              </p>
-              <p v-if="ws.description" class="mt-0.5 truncate text-xs text-muted-foreground/70">
-                {{ ws.description }}
-              </p>
-              <p class="mt-1 text-xs text-muted-foreground">
-                {{ formatTimeAgo(ws.updatedAt) }}
-              </p>
-            </div>
-          </div>
-        </div>
-
         <!-- Empty state -->
-        <div v-if="filteredWorkspaces.length === 0" class="flex flex-1 flex-col items-center justify-center py-24 text-center">
+        <div v-if="!workspacesLoading && filteredWorkspaces.length === 0" class="flex flex-1 flex-col items-center justify-center py-24 text-center">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="mb-4 text-muted-foreground/40">
             <path d="M12 3v4m0 14v-4m9-5h-4M7 12H3m15.364-6.364-2.828 2.828M9.464 14.536l-2.828 2.828m12.728 0-2.828-2.828M9.464 9.464 6.636 6.636" />
           </svg>
@@ -584,102 +491,41 @@ onUnmounted(() => {
     </main>
 
     <!-- Edit details dialog -->
-    <Teleport to="body">
-      <div
-        v-if="editDialogOpen"
-        class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
-        @click.self="editDialogOpen = false"
-      >
-        <div class="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl" @click.stop>
-          <!-- Header -->
-          <div class="flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-foreground">
-              Workspace Details
-            </h2>
-            <button
-              class="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-              @click="editDialogOpen = false"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
-            </button>
-          </div>
+    <EditWorkspace
+      v-model:open="editWsDialogOpen"
+      :name="editWsData.name"
+      :description="editWsData.description"
+      :locked="editWsData.locked"
+      @save="saveEditDialog"
+    />
+    <EditProject
+      v-model:open="projEditOpen"
+      :name="projEditData.name"
+      :description="projEditData.description"
+      @save="saveProjEditDialog"
+    />
 
-          <!-- Name -->
-          <div class="mt-5">
-            <label class="mb-1.5 block text-sm font-medium text-foreground">Name</label>
-            <input
-              v-model="editName"
-              type="text"
-              class="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-          </div>
-
-          <!-- Description -->
-          <div class="mt-4">
-            <label class="mb-1.5 block text-sm font-medium text-foreground">Description</label>
-            <textarea
-              v-model="editDescription"
-              rows="4"
-              class="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-              placeholder="Describe this workspace..."
-            />
-          </div>
-
-          <!-- Lock toggle -->
-          <div class="mt-4 flex items-center justify-between">
-            <div>
-              <div class="flex items-center gap-2 text-sm font-medium text-foreground">
-                Lock Workspace
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-              </div>
-              <p class="text-xs text-muted-foreground">
-                Lock your workspace to prevent edits or accidental changes.
-              </p>
-            </div>
-            <button
-              class="relative h-6 w-11 shrink-0 rounded-full transition-colors"
-              :class="editLocked ? 'bg-primary' : 'bg-muted'"
-              @click="editLocked = !editLocked"
-            >
-              <span
-                class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform"
-                :class="editLocked ? 'translate-x-5' : 'translate-x-0'"
-              />
-            </button>
-          </div>
-
-          <!-- Actions -->
-          <div class="mt-6 flex justify-end gap-2">
-            <button
-              class="h-9 rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-              @click="editDialogOpen = false"
-            >
-              Cancel
-            </button>
-            <button
-              class="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-              @click="saveEditDialog"
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <DialogNamePrompt
+    <DialogCreate
       v-model:open="newProjectOpen"
       title="New Project"
-      description="Give your project a name."
+      description="Give your project a name and an optional description."
       placeholder="My Project"
+      show-description
       @confirm="handleCreateProject"
     />
-    <DialogNamePrompt
+    <DialogCreate
       v-model:open="newWorkspaceOpen"
       title="New Workspace"
-      description="Give your workspace a name."
+      description="Give your workspace a name and an optional description."
       placeholder="My Workspace"
+      show-description
       @confirm="handleCreateWorkspace"
+    />
+    <ConfirmDelete
+      v-model:open="deleteDialogOpen"
+      :title="deleteDialogTitle"
+      :description="deleteDialogDescription"
+      @confirm="executeDelete"
     />
   </div>
 </template>
