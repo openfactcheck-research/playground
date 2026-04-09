@@ -13,7 +13,7 @@ defineEmits<{
   help: []
 }>()
 
-const isDark = ref(false)
+const isDark = ref(document.documentElement.classList.contains('dark'))
 const hoveredId = ref<string | null>(null)
 
 onMounted(() => {

@@ -10,7 +10,7 @@ const { createProject, createWorkspace } = useProjects(
   () => user.value?.userId ?? 'anonymous',
 )
 
-const isDark = ref(false)
+const isDark = ref(document.documentElement.classList.contains('dark'))
 let themeObserver: MutationObserver | null = null
 
 function checkTheme() {

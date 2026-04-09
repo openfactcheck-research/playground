@@ -37,7 +37,7 @@ function finishEdit() {
   }
 }
 
-const isDark = ref(false)
+const isDark = ref(document.documentElement.classList.contains('dark'))
 let observer: MutationObserver | null = null
 
 function checkTheme() {

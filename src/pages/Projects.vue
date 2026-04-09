@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import DialogNamePrompt from '@/components/DialogNamePrompt.vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,12 +22,8 @@ const { projects, projectsLoading, getProject, createProject, renameProject, del
 )
 
 // Theme
-const isDark = ref(false)
+const isDark = ref(document.documentElement.classList.contains('dark'))
 let themeObserver: MutationObserver | null = null
-
-function checkTheme() {
-  isDark.value = document.documentElement.classList.contains('dark')
-}
 
 function toggleTheme() {
   isDark.value = !isDark.value
@@ -36,8 +33,9 @@ function toggleTheme() {
 }
 
 onMounted(() => {
-  checkTheme()
-  themeObserver = new MutationObserver(checkTheme)
+  themeObserver = new MutationObserver(() => {
+    isDark.value = document.documentElement.classList.contains('dark')
+  })
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
 })
 
@@ -168,15 +166,19 @@ function formatTimeAgo(dateStr: string): string {
   return `Edited ${Math.floor(months / 12)}y ago`
 }
 
-async function addProject() {
-  const project = await createProject('New Project')
+// Create dialogs
+const newProjectOpen = ref(false)
+const newWorkspaceOpen = ref(false)
+
+async function handleCreateProject(name: string) {
+  const project = await createProject(name)
   selectedProjectId.value = project.id
 }
 
-async function addWorkspace() {
+async function handleCreateWorkspace(name: string) {
   if (!selectedProjectId.value)
     return
-  await createWorkspace(selectedProjectId.value, 'Untitled Workspace')
+  await createWorkspace(selectedProjectId.value, name)
 }
 
 function openWorkspace(workspaceId: string) {
@@ -195,11 +197,11 @@ function handleOutsideClick(event: MouseEvent) {
   }
 }
 
-// Redirect to welcome page when no projects exist
-watch(() => projects.value.length, (len) => {
-  if (len === 0 && !projectsLoading.value)
+// Redirect to welcome page when no projects exist (wait for load to finish)
+watch([() => projects.value.length, projectsLoading], ([len, loading]) => {
+  if (len === 0 && !loading)
     router.replace({ name: 'welcome' })
-}, { immediate: true })
+})
 
 // Load workspaces when selected project changes (immediate covers initial load)
 watch(selectedProjectId, (pid) => {
@@ -252,7 +254,7 @@ onUnmounted(() => {
           <button
             class="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             aria-label="New project"
-            @click="addProject"
+            @click="newProjectOpen = true"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 5v14M5 12h14" />
@@ -435,7 +437,7 @@ onUnmounted(() => {
 
         <button
           class="flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          @click="addWorkspace"
+          @click="newWorkspaceOpen = true"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 5v14M5 12h14" />
@@ -461,8 +463,13 @@ onUnmounted(() => {
               </svg>
             </div>
             <div class="flex-1 min-w-0">
-              <span class="text-sm font-medium text-foreground">{{ ws.name }}</span>
-              <span class="ml-3 text-xs text-muted-foreground">{{ formatTimeAgo(ws.updatedAt) }}</span>
+              <div class="flex items-center gap-3">
+                <span class="text-sm font-medium text-foreground">{{ ws.name }}</span>
+                <span class="text-xs text-muted-foreground">{{ formatTimeAgo(ws.updatedAt) }}</span>
+              </div>
+              <p v-if="ws.description" class="truncate text-xs text-muted-foreground/70">
+                {{ ws.description }}
+              </p>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
@@ -548,6 +555,9 @@ onUnmounted(() => {
               <p class="text-sm font-medium text-foreground">
                 {{ ws.name }}
               </p>
+              <p v-if="ws.description" class="mt-0.5 truncate text-xs text-muted-foreground/70">
+                {{ ws.description }}
+              </p>
               <p class="mt-1 text-xs text-muted-foreground">
                 {{ formatTimeAgo(ws.updatedAt) }}
               </p>
@@ -565,7 +575,7 @@ onUnmounted(() => {
           </p>
           <button
             class="mt-3 text-sm font-medium text-primary hover:underline"
-            @click="addWorkspace"
+            @click="newWorkspaceOpen = true"
           >
             Create your first workspace
           </button>
@@ -656,5 +666,20 @@ onUnmounted(() => {
         </div>
       </div>
     </Teleport>
+
+    <DialogNamePrompt
+      v-model:open="newProjectOpen"
+      title="New Project"
+      description="Give your project a name."
+      placeholder="My Project"
+      @confirm="handleCreateProject"
+    />
+    <DialogNamePrompt
+      v-model:open="newWorkspaceOpen"
+      title="New Workspace"
+      description="Give your workspace a name."
+      placeholder="My Workspace"
+      @confirm="handleCreateWorkspace"
+    />
   </div>
 </template>
