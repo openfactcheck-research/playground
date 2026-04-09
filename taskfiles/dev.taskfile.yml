@@ -15,11 +15,9 @@ tasks:
       - pnpm install
 
   dev:
-    desc: Start development server
-    env:
-      VITE_AUTH_BYPASS: 'true'
+    desc: Start dev server (TARGET=devhasan|integration|production; omit for local)
     cmds:
-      - pnpm dev
+      - '{{if .TARGET}}pnpm dev --mode {{.TARGET}}{{else}}pnpm dev{{end}}'
 
   build:
     desc: Type-check and build for production

@@ -23,7 +23,7 @@ import { useProjects } from '@/composables/useProjects'
 const route = useRoute()
 const router = useRouter()
 const { user, signOut } = useAuth()
-const { getProject, getWorkspaces, getWorkspace, createWorkspace, renameProject, renameWorkspace, deleteWorkspace, canAddWorkspace, touchWorkspace, reorderWorkspaces } = useProjects(
+const { getProject, getWorkspaces, getWorkspace, createWorkspace, renameProject, renameWorkspace, deleteWorkspace, canAddWorkspace, reorderWorkspaces, loadWorkspaces } = useProjects(
   () => user.value?.userId ?? 'anonymous',
 )
 
@@ -51,13 +51,13 @@ watch(workspaces, (ws) => {
 const project = computed(() => getProject(projectId.value))
 const activeWorkspace = computed(() => getWorkspace(projectId.value, activeTabId.value))
 
-function handleAddTab() {
-  const ws = createWorkspace(projectId.value, 'Untitled Workspace')
+async function handleAddTab() {
+  const ws = await createWorkspace(projectId.value, 'Untitled Workspace')
   if (ws)
     activeTabId.value = ws.id
 }
 
-function handleCloseTab(id: string) {
+async function handleCloseTab(id: string) {
   if (workspaces.value.length <= 1)
     return // don't close last tab
   const idx = workspaces.value.findIndex(w => w.id === id)
@@ -65,16 +65,22 @@ function handleCloseTab(id: string) {
     const next = workspaces.value[idx === 0 ? 1 : idx - 1]!
     activeTabId.value = next.id
   }
-  deleteWorkspace(projectId.value, id)
+  await deleteWorkspace(projectId.value, id)
 }
 
-function handleRenameTab(id: string, name: string) {
-  renameWorkspace(projectId.value, id, name)
+async function handleRenameTab(id: string, name: string) {
+  await renameWorkspace(projectId.value, id, name)
 }
 
-function handleReorderTabs(orderedIds: string[]) {
-  reorderWorkspaces(projectId.value, orderedIds)
+async function handleReorderTabs(orderedIds: string[]) {
+  await reorderWorkspaces(projectId.value, orderedIds)
 }
+
+// Load workspaces on mount and when projectId changes (route reuse)
+watch(projectId, (pid) => {
+  if (pid)
+    loadWorkspaces(pid)
+}, { immediate: true })
 
 const blocklyRef = ref<InstanceType<typeof BlocklyWorkspace> | null>(null)
 const welcomeTourRef = ref<InstanceType<typeof WelcomeTour> | null>(null)
@@ -226,7 +232,7 @@ async function handleLogout() {
             ref="blocklyRef"
             :project-id="projectId"
             :workspace-id="activeTabId"
-            @code-change="generatedCode = $event; touchWorkspace(projectId, activeTabId)"
+            @code-change="generatedCode = $event"
             @viewport-change="zoomPercent = $event"
             @trash-change="trashHasContents = $event"
             @block-select="selectedBlockInfo = $event"
