@@ -24,11 +24,21 @@ function toggleTheme() {
   document.documentElement.style.colorScheme = isDark.value ? 'dark' : 'light'
 }
 
-function createFirstProject() {
-  const project = createProject('My First Project')
-  const ws = createWorkspace(project.id, 'Untitled Workspace')
-  if (ws)
-    router.push({ name: 'dashboard', params: { projectId: project.id } })
+const creating = ref(false)
+
+async function createFirstProject() {
+  if (creating.value)
+    return
+  creating.value = true
+  try {
+    const project = await createProject('My First Project')
+    const ws = await createWorkspace(project.id, 'Untitled Workspace')
+    if (ws)
+      router.push({ name: 'dashboard', params: { projectId: project.id } })
+  }
+  finally {
+    creating.value = false
+  }
 }
 
 onMounted(() => {
@@ -113,7 +123,8 @@ onUnmounted(() => {
 
       <!-- CTA button -->
       <button
-        class="welcome-cta group mt-2 flex items-center gap-2.5 rounded-xl bg-primary px-7 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/25 active:scale-[0.98]"
+        class="welcome-cta group mt-2 flex items-center gap-2.5 rounded-xl bg-primary px-7 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/25 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
+        :disabled="creating"
         @click="createFirstProject"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">

@@ -43,6 +43,7 @@ environments/
 
 # .env files
 .env*
+!.env.example
 
 # Temp files
 tmp

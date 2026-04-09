@@ -1,277 +1,293 @@
-import { nanoid } from 'nanoid'
-import { computed, ref, watch } from 'vue'
+import type { Project, Workspace, WorkspaceSettings } from '@/types/projects'
+import { computed, ref } from 'vue'
+import { toast } from 'vue-sonner'
+import {
+  createProjectApi,
+  deleteProjectApi,
+  fetchProjects,
+  updateProjectApi,
+} from '@/services/projects.api'
+import {
+  createWorkspaceApi,
+  deleteWorkspaceApi,
+  duplicateWorkspaceApi,
+  fetchWorkspaces,
+  reorderWorkspacesApi,
+  updateWorkspaceApi,
+} from '@/services/workspaces.api'
+
+export type { Project, Workspace, WorkspaceSettings } from '@/types/projects'
 
 // ---------------------------------------------------------------------------
-// Types — mirrors the DynamoDB single-table schema
+// Reactive cache
 // ---------------------------------------------------------------------------
 
-/**
- * DynamoDB item shape for a Project.
- *   PK:    USER#<userId>#PROJECT#<projectId>
- *   GS1PK: USER#<userId>
- */
-export type ProjectRecord = {
-  PK: string
-  GS1PK: string
-  id: string
-  name: string
-  createdAt: string
-  updatedAt: string
-}
-
-/**
- * DynamoDB item shape for a Workspace.
- *   PK:    USER#<userId>#PROJECT#<projectId>#WORKSPACE#<workspaceId>
- *   GS1PK: USER#<userId>#PROJECT#<projectId>
- */
-export type WorkspaceSettings = {
-  verboseMode?: boolean
-}
-
-export type WorkspaceRecord = {
-  PK: string
-  GS1PK: string
-  id: string
-  projectId: string
-  name: string
-  description: string
-  locked: boolean
-  sortOrder: number
-  settings: WorkspaceSettings
-  createdAt: string
-  updatedAt: string
-}
-
-// ---------------------------------------------------------------------------
-// Key helpers — same format DynamoDB will use
-// ---------------------------------------------------------------------------
-
-function projectPK(userId: string, projectId: string): string {
-  return `USER#${userId}#PROJECT#${projectId}`
-}
-
-function projectGS1PK(userId: string): string {
-  return `USER#${userId}`
-}
-
-function workspacePK(userId: string, projectId: string, workspaceId: string): string {
-  return `USER#${userId}#PROJECT#${projectId}#WORKSPACE#${workspaceId}`
-}
-
-function workspaceGS1PK(userId: string, projectId: string): string {
-  return `USER#${userId}#PROJECT#${projectId}`
-}
-
-// ---------------------------------------------------------------------------
-// localStorage persistence
-// ---------------------------------------------------------------------------
-
-const STORAGE_KEY = 'ofc-projects-db'
 const MAX_WORKSPACES = 5
 
-type LocalDB = {
-  projects: ProjectRecord[]
-  workspaces: WorkspaceRecord[]
-}
+const projectsCache = ref<Project[]>([])
+const workspacesCache = ref<Workspace[]>([])
 
-function loadDB(): LocalDB {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as LocalDB
-      if (parsed.projects && parsed.workspaces)
-        return parsed
-    }
-  }
-  catch {
-    // ignore
-  }
-  return { projects: [], workspaces: [] }
-}
+const projectsLoading = ref(false)
+const workspacesLoading = ref(false)
 
-function saveDB(db: LocalDB): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(db))
-}
-
-// ---------------------------------------------------------------------------
-// Shared reactive state
-// ---------------------------------------------------------------------------
-
-const db = ref<LocalDB>(loadDB())
-
-watch(db, val => saveDB(val), { deep: true })
+// Track latest loadWorkspaces request to avoid races
+let workspacesLoadId = 0
 
 // ---------------------------------------------------------------------------
 // Composable
 // ---------------------------------------------------------------------------
 
-export function useProjects(userId: () => string) {
-  // -- Projects --
+export function useProjects(_userId: () => string) {
+  // =========================================================================
+  // Reads — from cache (synchronous)
+  // =========================================================================
 
-  const projects = computed(() =>
-    db.value.projects
-      .filter(p => p.GS1PK === projectGS1PK(userId()))
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
-  )
+  const projects = computed<Project[]>(() => projectsCache.value)
 
-  function getProject(projectId: string): ProjectRecord | undefined {
-    return db.value.projects.find(p => p.PK === projectPK(userId(), projectId))
+  function getProject(projectId: string): Project | undefined {
+    return projectsCache.value.find(p => p.id === projectId)
   }
 
-  function createProject(name: string): ProjectRecord {
-    const id = nanoid(12)
-    const now = new Date().toISOString()
-    const record: ProjectRecord = {
-      PK: projectPK(userId(), id),
-      GS1PK: projectGS1PK(userId()),
-      id,
-      name,
-      createdAt: now,
-      updatedAt: now,
-    }
-    db.value.projects.push(record)
-    return record
+  function getWorkspaces(projectId: string): Workspace[] {
+    return workspacesCache.value
+      .filter(w => w.projectId === projectId)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
   }
 
-  function renameProject(projectId: string, name: string): void {
-    const project = getProject(projectId)
-    if (project) {
-      project.name = name
-      project.updatedAt = new Date().toISOString()
-    }
-  }
-
-  function deleteProject(projectId: string): void {
-    // Delete all workspaces in the project
-    const wsGS1 = workspaceGS1PK(userId(), projectId)
-    const wsToRemove = db.value.workspaces.filter(w => w.GS1PK === wsGS1)
-    for (const ws of wsToRemove) {
-      localStorage.removeItem(`blockly-workspace-state-${ws.id}`)
-    }
-    db.value.workspaces = db.value.workspaces.filter(w => w.GS1PK !== wsGS1)
-    // Delete the project
-    db.value.projects = db.value.projects.filter(p => p.PK !== projectPK(userId(), projectId))
-  }
-
-  // -- Workspaces --
-
-  function getWorkspaces(projectId: string): WorkspaceRecord[] {
-    return db.value.workspaces
-      .filter(w => w.GS1PK === workspaceGS1PK(userId(), projectId))
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-  }
-
-  function getWorkspace(projectId: string, workspaceId: string): WorkspaceRecord | undefined {
-    return db.value.workspaces.find(w => w.PK === workspacePK(userId(), projectId, workspaceId))
-  }
-
-  function createWorkspace(projectId: string, name: string): WorkspaceRecord | null {
-    const existing = getWorkspaces(projectId)
-    if (existing.length >= MAX_WORKSPACES)
-      return null
-    const id = nanoid(12)
-    const now = new Date().toISOString()
-    const maxOrder = existing.reduce((max, w) => Math.max(max, w.sortOrder ?? 0), 0)
-    const record: WorkspaceRecord = {
-      PK: workspacePK(userId(), projectId, id),
-      GS1PK: workspaceGS1PK(userId(), projectId),
-      id,
-      projectId,
-      name,
-      description: '',
-      locked: false,
-      sortOrder: maxOrder + 1,
-      settings: {},
-      createdAt: now,
-      updatedAt: now,
-    }
-    db.value.workspaces.push(record)
-    // Touch parent project
-    const project = getProject(projectId)
-    if (project)
-      project.updatedAt = now
-    return record
-  }
-
-  function renameWorkspace(projectId: string, workspaceId: string, name: string): void {
-    const ws = getWorkspace(projectId, workspaceId)
-    if (ws) {
-      ws.name = name
-      ws.updatedAt = new Date().toISOString()
-    }
-  }
-
-  function updateWorkspace(projectId: string, workspaceId: string, fields: { name?: string, description?: string, locked?: boolean, settings?: WorkspaceSettings }): void {
-    const ws = getWorkspace(projectId, workspaceId)
-    if (!ws)
-      return
-    if (fields.name !== undefined)
-      ws.name = fields.name
-    if (fields.description !== undefined)
-      ws.description = fields.description
-    if (fields.locked !== undefined)
-      ws.locked = fields.locked
-    if (fields.settings !== undefined)
-      ws.settings = { ...ws.settings, ...fields.settings }
-    ws.updatedAt = new Date().toISOString()
-  }
-
-  function duplicateWorkspace(projectId: string, workspaceId: string): WorkspaceRecord | null {
-    const source = getWorkspace(projectId, workspaceId)
-    if (!source)
-      return null
-    const copy = createWorkspace(projectId, `${source.name} (copy)`)
-    if (!copy)
-      return null
-    copy.description = source.description
-    copy.locked = source.locked
-    copy.settings = { ...source.settings }
-    // Copy Blockly state
-    const blocklyState = localStorage.getItem(`blockly-workspace-state-${workspaceId}`)
-    if (blocklyState)
-      localStorage.setItem(`blockly-workspace-state-${copy.id}`, blocklyState)
-    return copy
-  }
-
-  function deleteWorkspace(projectId: string, workspaceId: string): void {
-    const pk = workspacePK(userId(), projectId, workspaceId)
-    localStorage.removeItem(`blockly-workspace-state-${workspaceId}`)
-    db.value.workspaces = db.value.workspaces.filter(w => w.PK !== pk)
-  }
-
-  function touchWorkspace(projectId: string, workspaceId: string): void {
-    const ws = getWorkspace(projectId, workspaceId)
-    if (ws)
-      ws.updatedAt = new Date().toISOString()
+  function getWorkspace(projectId: string, workspaceId: string): Workspace | undefined {
+    return workspacesCache.value.find(w => w.id === workspaceId && w.projectId === projectId)
   }
 
   function canAddWorkspace(projectId: string): boolean {
     return getWorkspaces(projectId).length < MAX_WORKSPACES
   }
 
-  function reorderWorkspaces(projectId: string, orderedIds: string[]): void {
+  // =========================================================================
+  // Cache management
+  // =========================================================================
+
+  function clearCache(): void {
+    projectsCache.value = []
+    workspacesCache.value = []
+  }
+
+  // =========================================================================
+  // Data loading
+  // =========================================================================
+
+  async function loadProjects(): Promise<void> {
+    projectsLoading.value = true
+    try {
+      projectsCache.value = await fetchProjects()
+    }
+    catch {
+      toast.error('Failed to load projects')
+    }
+    finally {
+      projectsLoading.value = false
+    }
+  }
+
+  async function loadWorkspaces(projectId: string): Promise<void> {
+    const requestId = ++workspacesLoadId
+    workspacesLoading.value = true
+    try {
+      const ws = await fetchWorkspaces(projectId)
+      // Only apply if this is still the latest request
+      if (requestId !== workspacesLoadId)
+        return
+      workspacesCache.value = [
+        ...workspacesCache.value.filter(w => w.projectId !== projectId),
+        ...ws,
+      ]
+    }
+    catch {
+      if (requestId === workspacesLoadId)
+        toast.error('Failed to load workspaces')
+    }
+    finally {
+      if (requestId === workspacesLoadId)
+        workspacesLoading.value = false
+    }
+  }
+
+  // =========================================================================
+  // Mutations
+  // =========================================================================
+
+  async function createProject(name: string): Promise<Project> {
+    try {
+      const project = await createProjectApi(name)
+      projectsCache.value.push(project)
+      return project
+    }
+    catch (e) {
+      toast.error('Failed to create project')
+      throw e
+    }
+  }
+
+  async function renameProject(projectId: string, name: string): Promise<void> {
+    const prev = projectsCache.value.find(p => p.id === projectId)
+    const prevName = prev?.name
+    if (prev)
+      prev.name = name
+
+    try {
+      const updated = await updateProjectApi(projectId, { name })
+      if (prev) {
+        prev.name = updated.name
+        prev.updatedAt = updated.updatedAt
+      }
+    }
+    catch {
+      if (prev && prevName !== undefined)
+        prev.name = prevName
+      toast.error('Failed to rename project')
+    }
+  }
+
+  async function deleteProject(projectId: string): Promise<void> {
+    const wsToRemove = workspacesCache.value.filter(w => w.projectId === projectId)
+    const prevProjects = [...projectsCache.value]
+    const prevWorkspaces = [...workspacesCache.value]
+    projectsCache.value = projectsCache.value.filter(p => p.id !== projectId)
+    workspacesCache.value = workspacesCache.value.filter(w => w.projectId !== projectId)
+
+    try {
+      await deleteProjectApi(projectId)
+      // Clean up localStorage only after API confirms
+      for (const ws of wsToRemove) {
+        localStorage.removeItem(`blockly-workspace-state-${ws.id}`)
+        localStorage.removeItem(`workspace-notes-${ws.id}`)
+      }
+    }
+    catch {
+      projectsCache.value = prevProjects
+      workspacesCache.value = prevWorkspaces
+      toast.error('Failed to delete project')
+    }
+  }
+
+  async function createWorkspace(projectId: string, name: string): Promise<Workspace | null> {
+    if (!canAddWorkspace(projectId)) {
+      toast.error('Workspace limit reached')
+      return null
+    }
+
+    try {
+      const ws = await createWorkspaceApi(projectId, name)
+      workspacesCache.value.push(ws)
+      return ws
+    }
+    catch {
+      toast.error('Failed to create workspace')
+      return null
+    }
+  }
+
+  async function renameWorkspace(projectId: string, workspaceId: string, name: string): Promise<void> {
+    return updateWorkspace(projectId, workspaceId, { name })
+  }
+
+  async function updateWorkspace(projectId: string, workspaceId: string, fields: { name?: string, description?: string, locked?: boolean, settings?: WorkspaceSettings }): Promise<void> {
+    const ws = workspacesCache.value.find(w => w.id === workspaceId && w.projectId === projectId)
+    const prev = ws ? { ...ws } : undefined
+
+    if (ws) {
+      if (fields.name !== undefined)
+        ws.name = fields.name
+      if (fields.description !== undefined)
+        ws.description = fields.description
+      if (fields.locked !== undefined)
+        ws.locked = fields.locked
+      if (fields.settings !== undefined)
+        ws.settings = { ...ws.settings, ...fields.settings }
+    }
+
+    try {
+      const updated = await updateWorkspaceApi(projectId, workspaceId, fields)
+      if (ws)
+        Object.assign(ws, updated)
+    }
+    catch {
+      if (ws && prev)
+        Object.assign(ws, prev)
+      toast.error('Failed to update workspace')
+    }
+  }
+
+  async function duplicateWorkspace(projectId: string, workspaceId: string): Promise<Workspace | null> {
+    try {
+      const ws = await duplicateWorkspaceApi(projectId, workspaceId)
+      workspacesCache.value.push(ws)
+      // Copy local state to the new workspace
+      const blocklyState = localStorage.getItem(`blockly-workspace-state-${workspaceId}`)
+      if (blocklyState)
+        localStorage.setItem(`blockly-workspace-state-${ws.id}`, blocklyState)
+      const notes = localStorage.getItem(`workspace-notes-${workspaceId}`)
+      if (notes)
+        localStorage.setItem(`workspace-notes-${ws.id}`, notes)
+      return ws
+    }
+    catch {
+      toast.error('Failed to duplicate workspace')
+      return null
+    }
+  }
+
+  async function deleteWorkspace(projectId: string, workspaceId: string): Promise<void> {
+    const prevWorkspaces = [...workspacesCache.value]
+    workspacesCache.value = workspacesCache.value.filter(w => !(w.id === workspaceId && w.projectId === projectId))
+
+    try {
+      await deleteWorkspaceApi(projectId, workspaceId)
+      // Clean up localStorage only after API confirms
+      localStorage.removeItem(`blockly-workspace-state-${workspaceId}`)
+      localStorage.removeItem(`workspace-notes-${workspaceId}`)
+    }
+    catch {
+      workspacesCache.value = prevWorkspaces
+      toast.error('Failed to delete workspace')
+    }
+  }
+
+  async function reorderWorkspaces(projectId: string, orderedIds: string[]): Promise<void> {
+    const prevWorkspaces = workspacesCache.value.map(w => ({ ...w }))
     orderedIds.forEach((id, index) => {
-      const ws = getWorkspace(projectId, id)
+      const ws = workspacesCache.value.find(w => w.id === id && w.projectId === projectId)
       if (ws)
         ws.sortOrder = index
     })
+
+    try {
+      await reorderWorkspacesApi(projectId, orderedIds)
+    }
+    catch {
+      workspacesCache.value = prevWorkspaces
+      toast.error('Failed to reorder workspaces')
+    }
   }
 
   return {
     projects,
+    projectsLoading,
+    workspacesLoading,
     getProject,
+    getWorkspaces,
+    getWorkspace,
+    canAddWorkspace,
+    clearCache,
+    loadProjects,
+    loadWorkspaces,
     createProject,
     renameProject,
     deleteProject,
-    getWorkspaces,
-    getWorkspace,
     createWorkspace,
     renameWorkspace,
     updateWorkspace,
     duplicateWorkspace,
     deleteWorkspace,
-    touchWorkspace,
-    canAddWorkspace,
     reorderWorkspaces,
   }
 }

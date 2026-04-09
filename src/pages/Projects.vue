@@ -16,7 +16,7 @@ let tickInterval: ReturnType<typeof setInterval> | null = null
 
 const router = useRouter()
 const { user, signOut } = useAuth()
-const { projects, getProject, createProject, renameProject, deleteProject, getWorkspaces, createWorkspace, updateWorkspace, duplicateWorkspace, deleteWorkspace } = useProjects(
+const { projects, projectsLoading, getProject, createProject, renameProject, deleteProject, getWorkspaces, createWorkspace, updateWorkspace, duplicateWorkspace, deleteWorkspace, loadProjects, loadWorkspaces, clearCache } = useProjects(
   () => user.value?.userId ?? 'anonymous',
 )
 
@@ -62,17 +62,17 @@ function startProjRename(projId: string, currentName: string) {
   setTimeout(() => projRenameInputRef.value?.focus(), 0)
 }
 
-function finishProjRename() {
+async function finishProjRename() {
   if (projRenameId.value && projRenameName.value.trim()) {
-    renameProject(projRenameId.value, projRenameName.value.trim())
+    await renameProject(projRenameId.value, projRenameName.value.trim())
   }
   projRenameId.value = null
   projRenameName.value = ''
 }
 
-function handleDeleteProject(projId: string) {
+async function handleDeleteProject(projId: string) {
   const wasSelected = selectedProjectId.value === projId
-  deleteProject(projId)
+  await deleteProject(projId)
   if (wasSelected) {
     selectedProjectId.value = projects.value[0]?.id ?? ''
   }
@@ -117,10 +117,10 @@ function openEditDialog(wsId: string) {
   editDialogOpen.value = true
 }
 
-function saveEditDialog() {
+async function saveEditDialog() {
   if (!editWsId.value || !editName.value.trim())
     return
-  updateWorkspace(selectedProjectId.value, editWsId.value, {
+  await updateWorkspace(selectedProjectId.value, editWsId.value, {
     name: editName.value.trim(),
     description: editDescription.value,
     locked: editLocked.value,
@@ -128,12 +128,12 @@ function saveEditDialog() {
   editDialogOpen.value = false
 }
 
-function handleDuplicate(wsId: string) {
-  duplicateWorkspace(selectedProjectId.value, wsId)
+async function handleDuplicate(wsId: string) {
+  await duplicateWorkspace(selectedProjectId.value, wsId)
 }
 
-function handleDelete(wsId: string) {
-  deleteWorkspace(selectedProjectId.value, wsId)
+async function handleDelete(wsId: string) {
+  await deleteWorkspace(selectedProjectId.value, wsId)
 }
 
 const selectedProject = computed(() => getProject(selectedProjectId.value))
@@ -168,15 +168,15 @@ function formatTimeAgo(dateStr: string): string {
   return `Edited ${Math.floor(months / 12)}y ago`
 }
 
-function addProject() {
-  const project = createProject('New Project')
+async function addProject() {
+  const project = await createProject('New Project')
   selectedProjectId.value = project.id
 }
 
-function addWorkspace() {
+async function addWorkspace() {
   if (!selectedProjectId.value)
     return
-  createWorkspace(selectedProjectId.value, 'Untitled Workspace')
+  await createWorkspace(selectedProjectId.value, 'Untitled Workspace')
 }
 
 function openWorkspace(workspaceId: string) {
@@ -185,6 +185,7 @@ function openWorkspace(workspaceId: string) {
 
 async function handleLogout() {
   await signOut()
+  clearCache()
   router.push('/login')
 }
 
@@ -196,15 +197,25 @@ function handleOutsideClick(event: MouseEvent) {
 
 // Redirect to welcome page when no projects exist
 watch(() => projects.value.length, (len) => {
-  if (len === 0)
+  if (len === 0 && !projectsLoading.value)
     router.replace({ name: 'welcome' })
 }, { immediate: true })
 
-onMounted(() => {
+// Load workspaces when selected project changes (immediate covers initial load)
+watch(selectedProjectId, (pid) => {
+  if (pid)
+    loadWorkspaces(pid)
+}, { immediate: true })
+
+onMounted(async () => {
   document.addEventListener('click', handleOutsideClick)
   tickInterval = setInterval(() => {
     now.value = Date.now()
   }, 30000)
+  await loadProjects()
+  // After projects load, select first if none selected
+  if (!selectedProjectId.value && projects.value.length > 0)
+    selectedProjectId.value = projects.value[0]!.id
 })
 
 onUnmounted(() => {
