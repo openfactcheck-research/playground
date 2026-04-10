@@ -1,18 +1,11 @@
 /**
- * Run types — used by composables, services, and pages.
+ * Run types — pipeline execution state on a workspace.
  */
 
-export type RunStatus = 'pending' | 'running' | 'completed' | 'failed'
+export type RunStatus = 'running' | 'completed' | 'failed'
 
 export type Run = {
-  id: string
-  projectId: string
-  workspaceId: string
   status: RunStatus
-  output: string | null
-  error: string | null
-  startedAt: string | null
-  completedAt: string | null
-  createdAt: string
-  updatedAt: string
+  output: string
+  error: string
 }

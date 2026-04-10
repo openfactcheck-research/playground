@@ -1,25 +1,18 @@
 /**
- * Run API service — calls /api/v1/projects/{pid}/runs endpoints.
+ * Run API service — calls workspace run endpoints.
  */
 
 import type { Run } from '@/types/runs'
 import { apiRequest } from '@/lib/api-client'
 
-function base(projectId: string): string {
-  return `/api/v1/projects/${projectId}/runs`
+function base(projectId: string, workspaceId: string): string {
+  return `/api/v1/projects/${projectId}/workspaces/${workspaceId}/run`
 }
 
-export function createRunApi(projectId: string, workspaceId: string, pipeline: object): Promise<Run> {
-  return apiRequest<Run>('POST', base(projectId), { workspaceId, pipeline })
+export function startRunApi(projectId: string, workspaceId: string, pipeline: object): Promise<Run> {
+  return apiRequest<Run>('POST', base(projectId, workspaceId), { pipeline })
 }
 
-export function fetchRunApi(projectId: string, runId: string): Promise<Run> {
-  return apiRequest<Run>('GET', `${base(projectId)}/${runId}`)
-}
-
-export function fetchRunsApi(projectId: string, workspaceId?: string, limit = 20): Promise<Run[]> {
-  const params = new URLSearchParams({ limit: String(limit) })
-  if (workspaceId)
-    params.set('workspaceId', workspaceId)
-  return apiRequest<Run[]>('GET', `${base(projectId)}?${params}`)
+export function fetchRunApi(projectId: string, workspaceId: string): Promise<Run | null> {
+  return apiRequest<Run | null>('GET', base(projectId, workspaceId))
 }
