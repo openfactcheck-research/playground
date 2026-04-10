@@ -35,15 +35,20 @@ function snakeToCamel(s: string): string {
 }
 
 function camelToSnake(s: string): string {
-  return s.replace(/[A-Z]/g, c => `_${c.toLowerCase()}`)
+  return s.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
 }
+
+const OPAQUE_KEYS = new Set(['pipeline', 'content', 'blockly', 'notes'])
 
 function mapKeys(obj: unknown, fn: (key: string) => string): unknown {
   if (Array.isArray(obj))
     return obj.map(item => mapKeys(item, fn))
   if (obj !== null && typeof obj === 'object') {
     return Object.fromEntries(
-      Object.entries(obj as Record<string, unknown>).map(([k, v]) => [fn(k), mapKeys(v, fn)]),
+      Object.entries(obj as Record<string, unknown>).map(([k, v]) => {
+        const mappedKey = fn(k)
+        return [mappedKey, OPAQUE_KEYS.has(k) || OPAQUE_KEYS.has(mappedKey) ? v : mapKeys(v, fn)]
+      }),
     )
   }
   return obj

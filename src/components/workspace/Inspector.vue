@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import type BlocklyWorkspace from './BlocklyWorkspace.vue'
 import type { SelectedBlockInfo } from './BlocklyWorkspace.vue'
-import { Code2, Puzzle } from 'lucide-vue-next'
+import type { Run } from '@/types/runs'
+import { Code2, Puzzle, Terminal } from 'lucide-vue-next'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import PanelCode from './PanelCode.vue'
 import PanelControls from './PanelControls.vue'
+import PanelOutput from './PanelOutput.vue'
 
-export type InspectorPanel = 'controls' | 'code'
+export type InspectorPanel = 'controls' | 'code' | 'output'
 
 defineProps<{
   code: string
   selectedBlock: SelectedBlockInfo | null
   highlightCode?: string
   blocklyRef?: InstanceType<typeof BlocklyWorkspace> | null
+  currentRun?: Run | null
 }>()
 
 const emit = defineEmits<{
@@ -64,6 +67,21 @@ function togglePanel(panel: InspectorPanel) {
           Generated Code
         </TooltipContent>
       </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <button
+            class="flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+            :class="activePanel === 'output' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'"
+            @click="togglePanel('output')"
+          >
+            <Terminal :size="16" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="left">
+          Output
+        </TooltipContent>
+      </Tooltip>
     </div>
 
     <!-- Panels: full workspace height, left of icon strip -->
@@ -82,6 +100,13 @@ function togglePanel(panel: InspectorPanel) {
         class="absolute right-14 top-16 bottom-20"
         :code="code"
         :highlight-code="highlightCode"
+      />
+    </Transition>
+    <Transition name="panel">
+      <PanelOutput
+        v-if="activePanel === 'output'"
+        class="absolute right-14 top-16 bottom-20"
+        :run="currentRun ?? null"
       />
     </Transition>
   </aside>

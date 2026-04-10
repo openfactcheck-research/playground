@@ -19,6 +19,7 @@ import WorkspaceTabs from '@/components/workspace/Tabs.vue'
 import WorkspaceTopControls from '@/components/workspace/TopControls.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useProjects } from '@/composables/useProjects'
+import { useRuns } from '@/composables/useRuns'
 import { useWorkspaceExportImport } from '@/composables/useWorkspaceExportImport'
 
 const route = useRoute()
@@ -85,6 +86,8 @@ const blocklyRef = ref<InstanceType<typeof BlocklyWorkspace> | null>(null)
 const welcomeTourRef = ref<InstanceType<typeof WelcomeTour> | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
+const { currentRun, isRunning, executeRun } = useRuns()
+
 const activeView = ref('workspace')
 const generatedCode = ref('')
 const selectedBlockInfo = ref<SelectedBlockInfo | null>(null)
@@ -140,6 +143,14 @@ function handleToggleLock() {
   workspaceLocked.value = !workspaceLocked.value
 }
 
+async function handleRun() {
+  const state = blocklyRef.value?.getState()
+  if (!state)
+    return
+  inspectorPanel.value = 'output'
+  await executeRun(projectId.value, activeTabId.value, state)
+}
+
 async function handleLogout() {
   await signOut()
   router.push('/login')
@@ -192,11 +203,13 @@ async function handleLogout() {
             :selected-block="selectedBlockInfo"
             :highlight-code="blockCodeHighlight ?? undefined"
             :blockly-ref="blocklyRef"
+            :current-run="currentRun"
             @freeze="blocklyRef?.freezeSelectedBlock()"
           />
           <WorkspaceTopControls
             :project-id="projectId"
             :workspace-id="activeTabId"
+            :is-running="isRunning"
             @undo="blocklyRef?.undo()"
             @redo="blocklyRef?.redo()"
             @copy="blocklyRef?.copySelectedBlocks()"
@@ -206,6 +219,7 @@ async function handleLogout() {
             @import="fileInputRef?.click()"
             @templates="() => {}"
             @add-note="blocklyRef?.addNote()"
+            @run="handleRun"
           />
           <WorkspaceBottomControls
             :zoom-percent="zoomPercent"

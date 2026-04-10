@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
-import { ClipboardPaste, Copy, Download, LayoutGrid, Redo2, StickyNote, Trash2, Undo2, Upload } from 'lucide-vue-next'
+import { ClipboardPaste, Copy, Download, LayoutGrid, Loader2, Play, Redo2, StickyNote, Trash2, Undo2, Upload } from 'lucide-vue-next'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useVerboseMode } from '@/composables/useVerboseMode'
@@ -8,6 +8,7 @@ import { useVerboseMode } from '@/composables/useVerboseMode'
 const props = defineProps<{
   projectId: string
   workspaceId: string
+  isRunning?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -20,6 +21,7 @@ const emit = defineEmits<{
   import: []
   templates: []
   addNote: []
+  run: []
 }>()
 
 const { verboseMode } = useVerboseMode(() => props.projectId, () => props.workspaceId)
@@ -122,6 +124,26 @@ const controls: ControlItem[] = [
         </TooltipContent>
       </Tooltip>
     </template>
+    <div class="h-5 w-px bg-border" />
+    <Tooltip>
+      <TooltipTrigger as-child>
+        <button
+          class="flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-colors"
+          :class="props.isRunning
+            ? 'bg-green-500/10 text-green-500 cursor-wait'
+            : 'bg-green-500/10 text-green-600 hover:bg-green-500/20 dark:text-green-400'"
+          :disabled="props.isRunning"
+          @click="emit('run')"
+        >
+          <Loader2 v-if="props.isRunning" :size="13" class="animate-spin" />
+          <Play v-else :size="13" />
+          Run
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        {{ props.isRunning ? 'Running...' : 'Run pipeline' }}
+      </TooltipContent>
+    </Tooltip>
     <div class="h-5 w-px bg-border" />
     <label class="flex items-center gap-2 px-1.5 text-xs text-muted-foreground select-none">
       <Switch v-model="verboseMode" />
