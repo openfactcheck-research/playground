@@ -201,7 +201,7 @@ tasks:
       vars: [TARGET]
     cmds:
       - pnpm exec vue-tsc -b
-      - pnpm exec vite build --mode {{.TARGET}}
+      - pnpm exec vite build --mode {{.TARGET}} 2>&1 | tail -5
       - |
         source taskfiles/common.helpers.sh && source taskfiles/deploy.helpers.sh
         prepare "{{.TARGET}}" "base" || exit 1
@@ -216,7 +216,7 @@ tasks:
         cd {{.ROOT_DIR}}
 
         printf '{{.COLOR_CYAN}}Uploading to S3...{{.COLOR_RESET}}\n'
-        aws s3 sync dist/ s3://$BUCKET --delete --profile "$AWS_PROFILE"
+        aws s3 sync dist/ s3://$BUCKET --delete --profile "$AWS_PROFILE" --only-show-errors
 
         printf '{{.COLOR_CYAN}}Invalidating CloudFront cache...{{.COLOR_RESET}}\n'
         aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*" --profile "$AWS_PROFILE" > /dev/null

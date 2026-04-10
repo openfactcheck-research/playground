@@ -17,7 +17,7 @@ defineProps<{
     <div class="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3">
       <span class="text-xs font-medium text-muted-foreground">Output</span>
       <template v-if="run">
-        <Loader2 v-if="run.status === 'pending' || run.status === 'running'" :size="12" class="animate-spin text-muted-foreground" />
+        <Loader2 v-if="run.status === 'running'" :size="12" class="animate-spin text-muted-foreground" />
         <CheckCircle v-else-if="run.status === 'completed'" :size="12" class="text-green-500" />
         <XCircle v-else-if="run.status === 'failed'" :size="12" class="text-red-500" />
       </template>
@@ -34,7 +34,7 @@ defineProps<{
       </div>
 
       <!-- Loading state -->
-      <div v-else-if="run.status === 'pending' || run.status === 'running'" class="flex-1 flex flex-col items-center justify-center text-center">
+      <div v-else-if="run.status === 'running'" class="flex-1 flex flex-col items-center justify-center text-center">
         <Loader2 :size="32" :stroke-width="1.5" class="mb-3 animate-spin text-muted-foreground/50" />
         <p class="text-sm text-muted-foreground">
           Running pipeline...
