@@ -13,10 +13,6 @@ export function fetchWorkspaces(projectId: string): Promise<Workspace[]> {
   return apiRequest<Workspace[]>('GET', base(projectId))
 }
 
-export function fetchWorkspace(projectId: string, workspaceId: string): Promise<Workspace> {
-  return apiRequest<Workspace>('GET', `${base(projectId)}/${workspaceId}`)
-}
-
 export function createWorkspaceApi(projectId: string, name: string, description = ''): Promise<Workspace> {
   return apiRequest<Workspace>('POST', base(projectId), { name, description })
 }

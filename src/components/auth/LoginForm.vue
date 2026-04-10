@@ -2,11 +2,13 @@
 import { Eye, EyeOff, Loader2 } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import LogoImage from '@/components/LogoImage.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/composables/useAuth'
+import { mapAuthError } from '@/lib/authErrors'
 import { POST_LOGIN_ROUTE } from '@/router'
 
 const router = useRouter()
@@ -41,21 +43,13 @@ async function handleSubmit() {
     router.push(POST_LOGIN_ROUTE)
   }
   catch (error: unknown) {
-    // Map Cognito error codes to user-friendly messages
-    const err = error as { name?: string, message?: string }
-    if (err.name === 'UserNotFoundException') {
-      errorMessage.value = 'No account found with this email. Please sign up first.'
-    }
-    else if (err.name === 'NotAuthorizedException') {
-      errorMessage.value = 'Incorrect password. Please try again.'
-    }
-    else if (err.name === 'UserNotConfirmedException') {
-      // Account exists but email was never verified — redirect to verify page
+    const err = error as { name?: string }
+    if (err.name === 'UserNotConfirmedException') {
       errorMessage.value = 'Please verify your email first.'
       router.push({ name: 'verify', query: { email: email.value } })
     }
     else {
-      errorMessage.value = err.message || 'An error occurred. Please try again.'
+      errorMessage.value = mapAuthError(error)
     }
   }
   finally {
@@ -66,10 +60,7 @@ async function handleSubmit() {
 
 <template>
   <div class="flex flex-col items-center gap-6">
-    <div>
-      <img src="/logo_dark.svg" alt="OpenFactCheck" class="h-12 dark:hidden">
-      <img src="/logo_light.svg" alt="OpenFactCheck" class="hidden h-12 dark:block">
-    </div>
+    <LogoImage class="h-12" />
     <Card class="w-full">
       <CardHeader class="text-center">
         <CardTitle class="text-xl">

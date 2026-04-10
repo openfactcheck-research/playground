@@ -1,9 +1,12 @@
 import { ref } from 'vue'
+import { toast } from 'vue-sonner'
+import { downloadJSON } from '@/lib/utils'
 
 export function useWorkspaceExportImport(
   getState: () => object | null,
   setState: (state: object) => void,
   getWorkspaceName: () => string,
+  onNewTab?: (workspace: object, name: string) => Promise<void>,
 ) {
   // Export
   const exportDialogOpen = ref(false)
@@ -28,16 +31,7 @@ export function useWorkspaceExportImport(
   function confirmExport(): void {
     if (!pendingExportData || !exportFilename.value.trim())
       return
-    const json = JSON.stringify(pendingExportData, null, 2)
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${exportFilename.value.trim().replace(/\.json$/i, '')}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    downloadJSON(exportFilename.value.trim().replace(/\.json$/i, ''), pendingExportData)
     exportDialogOpen.value = false
     pendingExportData = null
   }
@@ -57,8 +51,7 @@ export function useWorkspaceExportImport(
       try {
         const data = JSON.parse(e.target?.result as string)
         if (!data.workspace) {
-          // eslint-disable-next-line no-alert
-          alert('Invalid pipeline file: missing workspace data')
+          toast.error('Invalid pipeline file: missing workspace data')
           return
         }
         pendingImportData = data
@@ -66,18 +59,22 @@ export function useWorkspaceExportImport(
         importDialogOpen.value = true
       }
       catch {
-        // eslint-disable-next-line no-alert
-        alert('Failed to import pipeline: invalid JSON')
+        toast.error('Failed to import pipeline: invalid JSON')
       }
     }
     reader.readAsText(file)
     input.value = ''
   }
 
-  function handleImportAction(_action: 'new-tab' | 'replace'): void {
+  async function handleImportAction(action: 'new-tab' | 'replace'): Promise<void> {
     if (!pendingImportData)
       return
-    setState(pendingImportData.workspace)
+    if (action === 'new-tab' && onNewTab) {
+      await onNewTab(pendingImportData.workspace, pendingImportData.name || 'Imported Pipeline')
+    }
+    else {
+      setState(pendingImportData.workspace)
+    }
     pendingImportData = null
   }
 

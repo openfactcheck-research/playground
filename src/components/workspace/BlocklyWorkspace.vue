@@ -17,7 +17,6 @@ import BlocklyToolbar from '@/components/workspace/BlockToolbar.vue'
 import BlocklyContextMenu from '@/components/workspace/ContextMenu.vue'
 import NoteToolbar from '@/components/workspace/NoteToolbar.vue'
 import StickyNote from '@/components/workspace/StickyNote.vue'
-import { useAuth } from '@/composables/useAuth'
 import { useBlockTooltip } from '@/composables/useBlockTooltip'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { useProjects } from '@/composables/useProjects'
@@ -71,10 +70,7 @@ let _resizeObserver: ResizeObserver | null = null
 let _themeObserver: MutationObserver | null = null
 
 // --- API content persistence ---
-const { user } = useAuth()
-const { getWorkspace: getWsFromCache, saveWorkspaceContent } = useProjects(
-  () => user.value?.userId ?? 'anonymous',
-)
+const { getWorkspace: getWsFromCache, saveWorkspaceContent } = useProjects()
 
 const _notesContainer = { get: (): import('@/types/projects').StickyNote[] => [] }
 

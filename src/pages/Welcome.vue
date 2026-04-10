@@ -1,16 +1,13 @@
 <script setup lang="ts">
+import { BookOpen, Check, ChevronRight, Plus } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
+import LogoImage from '@/components/LogoImage.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useProjects } from '@/composables/useProjects'
-import { useTheme } from '@/composables/useTheme'
 
 const router = useRouter()
-const { user } = useAuth()
-const { createProject, createWorkspace } = useProjects(
-  () => user.value?.userId ?? 'anonymous',
-)
-const { isDark, toggleTheme } = useTheme()
+const { createProject, createWorkspace } = useProjects()
 
 const creating = ref(false)
 
@@ -23,6 +20,9 @@ async function createFirstProject() {
     const ws = await createWorkspace(project.id, 'Untitled Workspace')
     if (ws)
       router.push({ name: 'dashboard', params: { projectId: project.id } })
+  }
+  catch {
+    // Toast already shown by useProjects
   }
   finally {
     creating.value = false
@@ -48,27 +48,12 @@ async function createFirstProject() {
     />
 
     <!-- Theme toggle — top-right corner -->
-    <button
-      class="absolute right-5 top-5 z-10 flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-      @click="toggleTheme"
-    >
-      <svg v-if="isDark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="4" />
-        <path d="M12 2v2" /><path d="M12 20v2" />
-        <path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" />
-        <path d="M2 12h2" /><path d="M20 12h2" />
-        <path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" />
-      </svg>
-      <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-      </svg>
-    </button>
+    <ThemeToggle class="absolute right-5 top-5 z-10 flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" />
 
     <div class="relative z-10 flex flex-col items-center gap-8 px-4">
       <!-- Logo icon with glow -->
       <div class="welcome-logo flex h-20 w-20 items-center justify-center rounded-2xl border border-border/60 bg-card/80 shadow-xl shadow-primary/5 ring-1 ring-primary/20 backdrop-blur-sm">
-        <img v-if="!isDark" src="/logo_sq_dark.svg" alt="OpenFactCheck" class="h-10 w-10">
-        <img v-else src="/logo_sq_light.svg" alt="OpenFactCheck" class="h-10 w-10">
+        <LogoImage variant="square" class="h-10 w-10" />
       </div>
 
       <!-- Heading -->
@@ -86,15 +71,15 @@ async function createFirstProject() {
       <!-- Feature pills -->
       <div class="flex flex-wrap justify-center gap-2">
         <span class="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-3 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur-sm">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="m5 12 5 5L20 7" /></svg>
+          <Check :size="12" :stroke-width="2.5" class="text-primary" />
           Visual blocks
         </span>
         <span class="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-3 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur-sm">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="m5 12 5 5L20 7" /></svg>
+          <Check :size="12" :stroke-width="2.5" class="text-primary" />
           Auto code generation
         </span>
         <span class="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-3 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur-sm">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="m5 12 5 5L20 7" /></svg>
+          <Check :size="12" :stroke-width="2.5" class="text-primary" />
           Multi-model support
         </span>
       </div>
@@ -105,13 +90,9 @@ async function createFirstProject() {
         :disabled="creating"
         @click="createFirstProject"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
+        <Plus :size="16" :stroke-width="2.5" />
         Create your first project
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="transition-transform group-hover:translate-x-0.5">
-          <path d="m9 18 6-6-6-6" />
-        </svg>
+        <ChevronRight :size="14" :stroke-width="2.5" class="transition-transform group-hover:translate-x-0.5" />
       </button>
 
       <!-- Link row -->
@@ -134,9 +115,7 @@ async function createFirstProject() {
           rel="noopener noreferrer"
           class="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-          </svg>
+          <BookOpen :size="16" />
           Docs
         </a>
       </div>

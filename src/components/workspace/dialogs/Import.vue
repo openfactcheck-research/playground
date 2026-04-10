@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { Component } from 'vue'
+import { Plus, RefreshCw } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -13,13 +15,11 @@ type LoadAction = {
   action: 'new-tab' | 'replace'
   label: string
   description: string
-  icon: string
+  icon: Component
 }
 
-const { itemName, title } = defineProps<{
-  /** Name of the item being loaded (e.g., template name or filename) */
+defineProps<{
   itemName?: string
-  /** Optional title override */
   title?: string
 }>()
 
@@ -34,13 +34,13 @@ const actions: LoadAction[] = [
     action: 'new-tab',
     label: 'Create New Tab',
     description: 'Open in a new workspace tab',
-    icon: '<path d="M12 5v14M5 12h14"/>',
+    icon: Plus,
   },
   {
     action: 'replace',
     label: 'Replace Current',
     description: 'Replace blocks in the current workspace',
-    icon: '<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/>',
+    icon: RefreshCw,
   },
 ]
 
@@ -68,7 +68,7 @@ function handleAction(action: 'new-tab' | 'replace') {
           class="flex items-center gap-4 rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           @click="handleAction(item.action)"
         >
-          <svg class="size-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="item.icon" />
+          <component :is="item.icon" class="size-6 text-primary" />
           <div>
             <div class="font-medium">
               {{ item.label }}

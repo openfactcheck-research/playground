@@ -2,7 +2,7 @@
 import type { SelectedBlockInfo } from '@/components/workspace/BlocklyWorkspace.vue'
 import type { InspectorPanel } from '@/components/workspace/Inspector.vue'
 import type { WorkspaceTab } from '@/components/workspace/Tabs.vue'
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DialogUrlPrompt from '@/blockly/dialogs/URLPrompt.vue'
 import { promptOpen } from '@/blockly/dialogs/urlPromptBridge'
@@ -23,10 +23,8 @@ import { useWorkspaceExportImport } from '@/composables/useWorkspaceExportImport
 
 const route = useRoute()
 const router = useRouter()
-const { user, signOut } = useAuth()
-const { getProject, getWorkspaces, getWorkspace, createWorkspace, renameProject, renameWorkspace, deleteWorkspace, canAddWorkspace, reorderWorkspaces, loadWorkspaces } = useProjects(
-  () => user.value?.userId ?? 'anonymous',
-)
+const { signOut } = useAuth()
+const { getProject, getWorkspaces, getWorkspace, createWorkspace, renameProject, renameWorkspace, deleteWorkspace, canAddWorkspace, reorderWorkspaces, loadWorkspaces } = useProjects()
 
 const projectId = computed(() => route.params.projectId as string)
 const initialWs = route.query.ws as string | undefined
@@ -127,6 +125,14 @@ const {
   () => blocklyRef.value?.getState() ?? null,
   (state: object) => blocklyRef.value?.setState(state),
   () => activeWorkspace.value?.name || 'Pipeline',
+  async (workspace, name) => {
+    const ws = await createWorkspace(projectId.value, name)
+    if (ws) {
+      activeTabId.value = ws.id
+      await nextTick()
+      blocklyRef.value?.setState(workspace)
+    }
+  },
 )
 
 function handleToggleLock() {

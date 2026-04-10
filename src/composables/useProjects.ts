@@ -37,7 +37,7 @@ const workspacesLoadIds = new Map<string, number>()
 // Composable
 // ---------------------------------------------------------------------------
 
-export function useProjects(_userId: () => string) {
+export function useProjects() {
   // =========================================================================
   // Reads — from cache (synchronous)
   // =========================================================================

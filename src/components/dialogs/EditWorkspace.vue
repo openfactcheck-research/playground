@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Lock } from 'lucide-vue-next'
 import { ref, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import {
@@ -66,7 +67,7 @@ function submit() {
           <div>
             <div class="flex items-center gap-2 text-sm font-medium">
               Lock Workspace
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+              <Lock :size="16" class="text-muted-foreground" />
             </div>
             <p class="text-xs text-muted-foreground">
               Lock your workspace to prevent edits or accidental changes.

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { StickyNoteData } from '@/composables/useWorkspaceNotes'
 import { marked } from 'marked'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 const props = defineProps<{
   note: StickyNoteData
@@ -103,6 +103,11 @@ function onResizeEnd(): void {
   document.removeEventListener('pointermove', onResizeMove, true)
   document.removeEventListener('pointerup', onResizeEnd, true)
 }
+
+onBeforeUnmount(() => {
+  onDragEnd()
+  onResizeEnd()
+})
 
 // Close editing if note gets deselected while editing
 watch(() => props.selected, (sel) => {

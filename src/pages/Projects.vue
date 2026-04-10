@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { Copy, Download, EllipsisVertical, LogOut, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import ConfirmDelete from '@/components/dialogs/ConfirmDelete.vue'
 import DialogCreate from '@/components/dialogs/Create.vue'
 import EditProject from '@/components/dialogs/EditProject.vue'
 import EditWorkspace from '@/components/dialogs/EditWorkspace.vue'
+import LogoImage from '@/components/LogoImage.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,18 +18,14 @@ import {
 import { useAuth } from '@/composables/useAuth'
 import { useClickOutside } from '@/composables/useClickOutside'
 import { useProjects } from '@/composables/useProjects'
-import { useTheme } from '@/composables/useTheme'
+import { downloadJSON, formatTimeAgo } from '@/lib/utils'
 
 const now = ref(Date.now())
 let tickInterval: ReturnType<typeof setInterval> | null = null
 
 const router = useRouter()
 const { user, signOut } = useAuth()
-const { projects, projectsLoading, workspacesLoading, getProject, createProject, updateProject, deleteProject, getWorkspaces, createWorkspace, updateWorkspace, duplicateWorkspace, deleteWorkspace, loadProjects, loadWorkspaces, clearCache } = useProjects(
-  () => user.value?.userId ?? 'anonymous',
-)
-
-const { isDark, toggleTheme } = useTheme()
+const { projects, projectsLoading, workspacesLoading, getProject, createProject, updateProject, deleteProject, getWorkspaces, createWorkspace, updateWorkspace, duplicateWorkspace, deleteWorkspace, loadProjects, loadWorkspaces, clearCache } = useProjects()
 
 const selectedProjectId = ref(projects.value[0]?.id ?? '')
 const searchQuery = ref('')
@@ -64,16 +63,7 @@ function handleExportProject(projId: string) {
     blocklyState: ws.content?.blockly ?? null,
   }))
   const data = { version: 1, project, workspaces, exportedAt: new Date().toISOString() }
-  const json = JSON.stringify(data, null, 2)
-  const blob = new Blob([json], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${project.name.replace(/\s+/g, '-').toLowerCase()}.json`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  downloadJSON(project.name.replace(/\s+/g, '-').toLowerCase(), data)
 }
 
 // Edit details dialog
@@ -92,7 +82,12 @@ function openEditDialog(wsId: string) {
 }
 
 async function saveEditDialog(name: string, description: string, locked: boolean) {
-  await updateWorkspace(selectedProjectId.value, editWsId.value, { name, description, locked })
+  try {
+    await updateWorkspace(selectedProjectId.value, editWsId.value, { name, description, locked })
+  }
+  catch {
+    // Toast already shown by useProjects
+  }
 }
 
 // Project edit dialog
@@ -110,11 +105,21 @@ function openProjEditDialog(projId: string) {
 }
 
 async function saveProjEditDialog(name: string, description: string) {
-  await updateProject(projEditId.value, { name, description })
+  try {
+    await updateProject(projEditId.value, { name, description })
+  }
+  catch {
+    // Toast already shown by useProjects
+  }
 }
 
 async function handleDuplicate(wsId: string) {
-  await duplicateWorkspace(selectedProjectId.value, wsId)
+  try {
+    await duplicateWorkspace(selectedProjectId.value, wsId)
+  }
+  catch {
+    // Toast already shown by useProjects
+  }
 }
 
 function confirmDeleteWorkspace(wsId: string) {
@@ -127,9 +132,14 @@ function confirmDeleteWorkspace(wsId: string) {
 }
 
 async function executeDelete() {
-  if (pendingDeleteAction) {
-    await pendingDeleteAction()
-    pendingDeleteAction = null
+  try {
+    if (pendingDeleteAction) {
+      await pendingDeleteAction()
+      pendingDeleteAction = null
+    }
+  }
+  catch {
+    // Toast already shown by useProjects
   }
 }
 
@@ -145,33 +155,18 @@ const filteredWorkspaces = computed(() => {
   return workspaces.filter(w => w.name.toLowerCase().includes(q))
 })
 
-function formatTimeAgo(dateStr: string): string {
-  const _tick = now.value
-  const diff = _tick - new Date(dateStr).getTime()
-  const minutes = Math.floor(diff / 60000)
-  if (minutes < 1)
-    return 'Edited just now'
-  if (minutes < 60)
-    return `Edited ${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24)
-    return `Edited ${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30)
-    return `Edited ${days}d ago`
-  const months = Math.floor(days / 30)
-  if (months < 12)
-    return `Edited ${months}mo ago`
-  return `Edited ${Math.floor(months / 12)}y ago`
-}
-
 // Create dialogs
 const newProjectOpen = ref(false)
 const newWorkspaceOpen = ref(false)
 
 async function handleCreateProject(name: string, description: string) {
-  const project = await createProject(name, description)
-  selectedProjectId.value = project.id
+  try {
+    const project = await createProject(name, description)
+    selectedProjectId.value = project.id
+  }
+  catch {
+    // Toast already shown by useProjects
+  }
 }
 
 async function handleCreateWorkspace(name: string, description: string) {
@@ -224,8 +219,7 @@ onUnmounted(() => {
     <aside class="flex w-56 flex-col border-r border-border bg-card">
       <!-- Logo -->
       <div class="flex h-14 items-center border-b border-border px-4">
-        <img v-if="!isDark" src="/logo_dark.svg" alt="OpenFactCheck" class="h-8">
-        <img v-else src="/logo_light.svg" alt="OpenFactCheck" class="h-8">
+        <LogoImage class="h-8" />
       </div>
 
       <!-- Projects header -->
@@ -237,9 +231,7 @@ onUnmounted(() => {
             aria-label="New project"
             @click="newProjectOpen = true"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
+            <Plus :size="14" />
           </button>
         </div>
       </div>
@@ -253,7 +245,7 @@ onUnmounted(() => {
           </div>
         </template>
 
-        <div
+        <button
           v-for="project in projects"
           :key="project.id"
           class="group relative flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors cursor-pointer"
@@ -272,50 +264,36 @@ onUnmounted(() => {
                   :class="selectedProjectId === project.id ? 'opacity-100' : 'group-hover:opacity-100'"
                   @click.stop
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" />
-                  </svg>
+                  <EllipsisVertical :size="12" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" side="right" class="min-w-40">
                 <DropdownMenuItem @click="openProjEditDialog(project.id)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                  <Pencil :size="14" />
                   Edit details
                 </DropdownMenuItem>
                 <DropdownMenuItem @click="handleExportProject(project.id)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                  <Download :size="14" />
                   Export
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" @click="confirmDeleteProject(project.id)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                  <Trash2 :size="14" />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
+        </button>
       </nav>
 
       <!-- Bottom section -->
       <div class="border-t border-border p-2">
         <!-- Theme toggle -->
-        <button
+        <ThemeToggle
+          show-label
           class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
-          @click="toggleTheme"
-        >
-          <svg v-if="isDark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2" /><path d="M12 20v2" />
-            <path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" />
-            <path d="M2 12h2" /><path d="M20 12h2" />
-            <path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" />
-          </svg>
-          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-          </svg>
-          <span>{{ isDark ? 'Light mode' : 'Dark mode' }}</span>
-        </button>
+        />
 
         <!-- User -->
         <div ref="userMenuRef" class="relative">
@@ -344,11 +322,7 @@ onUnmounted(() => {
               class="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-500/10"
               @click="showUserMenu = false; handleLogout()"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
+              <LogOut :size="14" />
               Log out
             </button>
           </div>
@@ -382,13 +356,12 @@ onUnmounted(() => {
       <!-- Toolbar: search + view toggle + new flow -->
       <div class="flex items-center gap-3 px-6 py-4">
         <div class="relative max-w-sm flex-1">
-          <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-          </svg>
+          <Search :size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             v-model="searchQuery"
             type="text"
             placeholder="Search workspaces..."
+            aria-label="Search workspaces"
             class="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           >
         </div>
@@ -399,9 +372,7 @@ onUnmounted(() => {
           class="flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           @click="newWorkspaceOpen = true"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
+          <Plus :size="14" />
           New Workspace
         </button>
       </div>
@@ -421,10 +392,10 @@ onUnmounted(() => {
 
         <!-- List view -->
         <div class="flex flex-col">
-          <div
+          <button
             v-for="ws in filteredWorkspaces"
             :key="ws.id"
-            class="group flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-secondary/50 cursor-pointer"
+            class="group flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-secondary/50 cursor-pointer"
             @click="openWorkspace(ws.id)"
           >
             <!-- Workspace icon -->
@@ -436,7 +407,7 @@ onUnmounted(() => {
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-3">
                 <span class="text-sm font-medium text-foreground">{{ ws.name }}</span>
-                <span class="text-xs text-muted-foreground">{{ formatTimeAgo(ws.updatedAt) }}</span>
+                <span class="text-xs text-muted-foreground">Edited {{ formatTimeAgo(ws.updatedAt, now) }}</span>
               </div>
               <p v-if="ws.description" class="truncate text-xs text-muted-foreground/70">
                 {{ ws.description }}
@@ -448,45 +419,43 @@ onUnmounted(() => {
                   class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-secondary hover:text-foreground"
                   @click.stop
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" />
-                  </svg>
+                  <EllipsisVertical :size="14" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" class="min-w-44">
                 <DropdownMenuItem @click="openEditDialog(ws.id)">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                  <Pencil :size="15" />
                   Edit details
                 </DropdownMenuItem>
                 <DropdownMenuItem @click="handleDuplicate(ws.id)">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                  <Copy :size="15" />
                   Duplicate
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" @click="confirmDeleteWorkspace(ws.id)">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                  <Trash2 :size="15" />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        </div>
-
-        <!-- Empty state -->
-        <div v-if="!workspacesLoading && filteredWorkspaces.length === 0" class="flex flex-1 flex-col items-center justify-center py-24 text-center">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="mb-4 text-muted-foreground/40">
-            <path d="M12 3v4m0 14v-4m9-5h-4M7 12H3m15.364-6.364-2.828 2.828M9.464 14.536l-2.828 2.828m12.728 0-2.828-2.828M9.464 9.464 6.636 6.636" />
-          </svg>
-          <p class="text-sm text-muted-foreground">
-            No workspaces yet
-          </p>
-          <button
-            class="mt-3 text-sm font-medium text-primary hover:underline"
-            @click="newWorkspaceOpen = true"
-          >
-            Create your first workspace
           </button>
         </div>
+      </div>
+
+      <!-- Empty state -->
+      <div v-if="!workspacesLoading && filteredWorkspaces.length === 0" class="flex flex-1 flex-col items-center justify-center py-24 text-center">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="mb-4 text-muted-foreground/40">
+          <path d="M12 3v4m0 14v-4m9-5h-4M7 12H3m15.364-6.364-2.828 2.828M9.464 14.536l-2.828 2.828m12.728 0-2.828-2.828M9.464 9.464 6.636 6.636" />
+        </svg>
+        <p class="text-sm text-muted-foreground">
+          No workspaces yet
+        </p>
+        <button
+          class="mt-3 text-sm font-medium text-primary hover:underline"
+          @click="newWorkspaceOpen = true"
+        >
+          Create your first workspace
+        </button>
       </div>
     </main>
 

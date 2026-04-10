@@ -2,7 +2,7 @@
 import { Pencil, Plus } from 'lucide-vue-next'
 import { nextTick, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { useTheme } from '@/composables/useTheme'
+import LogoImage from '@/components/LogoImage.vue'
 
 const props = defineProps<{
   activeView: string
@@ -37,22 +37,20 @@ function finishEdit() {
     emit('renameProject', trimmed)
   }
 }
-
-const { isDark } = useTheme()
 </script>
 
 <template>
   <header class="flex h-14 items-center justify-between border-b border-border bg-card px-4">
     <div class="flex items-center gap-3">
       <RouterLink to="/projects" class="flex items-center">
-        <img v-if="!isDark" src="/logo_sq_dark.svg" alt="OpenFactCheck" class="h-8 w-8">
-        <img v-else src="/logo_sq_light.svg" alt="OpenFactCheck" class="h-8 w-8">
+        <LogoImage variant="square" class="h-8 w-8" />
       </RouterLink>
       <span v-if="projectName" class="text-muted-foreground/40">/</span>
       <input
         v-if="editing"
         ref="inputRef"
         v-model="editName"
+        aria-label="Project name"
         class="border-none bg-transparent text-sm font-medium text-foreground outline-none"
         @blur="finishEdit"
         @keydown.enter="finishEdit"

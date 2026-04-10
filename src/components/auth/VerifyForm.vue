@@ -2,11 +2,13 @@
 import { Loader2 } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import LogoImage from '@/components/LogoImage.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/composables/useAuth'
+import { mapAuthError } from '@/lib/authErrors'
 
 const route = useRoute()
 const router = useRouter()
@@ -47,17 +49,7 @@ async function handleSubmit() {
     setTimeout(() => router.push('/login'), 1500)
   }
   catch (error: unknown) {
-    // Map Cognito error codes to user-friendly messages
-    const err = error as { name?: string, message?: string }
-    if (err.name === 'CodeMismatchException') {
-      errorMessage.value = 'Invalid verification code. Please try again.'
-    }
-    else if (err.name === 'ExpiredCodeException') {
-      errorMessage.value = 'Verification code has expired. Please request a new one.'
-    }
-    else {
-      errorMessage.value = err.message || 'An error occurred. Please try again.'
-    }
+    errorMessage.value = mapAuthError(error)
   }
   finally {
     isLoading.value = false
@@ -80,13 +72,7 @@ async function handleResendCode() {
     successMessage.value = 'Verification code sent! Check your email.'
   }
   catch (error: unknown) {
-    const err = error as { name?: string, message?: string }
-    if (err.name === 'LimitExceededException') {
-      errorMessage.value = 'Too many attempts. Please try again later.'
-    }
-    else {
-      errorMessage.value = err.message || 'Failed to resend code. Please try again.'
-    }
+    errorMessage.value = mapAuthError(error)
   }
   finally {
     isResending.value = false
@@ -96,8 +82,7 @@ async function handleResendCode() {
 
 <template>
   <div class="flex flex-col items-center gap-6">
-    <img src="/logo_dark.svg" alt="OpenFactCheck" class="h-12 dark:hidden">
-    <img src="/logo_light.svg" alt="OpenFactCheck" class="hidden h-12 dark:block">
+    <LogoImage class="h-12" />
     <Card class="w-full">
       <CardHeader class="text-center">
         <CardTitle class="text-2xl">

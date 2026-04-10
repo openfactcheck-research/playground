@@ -2,11 +2,13 @@
 import { Check, Eye, EyeOff, Loader2, X } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import LogoImage from '@/components/LogoImage.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/composables/useAuth'
+import { mapAuthError } from '@/lib/authErrors'
 
 const router = useRouter()
 const { signUp } = useAuth()
@@ -80,17 +82,7 @@ async function handleSubmit() {
     }
   }
   catch (error: unknown) {
-    // Map Cognito error codes to user-friendly messages
-    const err = error as { name?: string, message?: string }
-    if (err.name === 'UsernameExistsException') {
-      errorMessage.value = 'An account with this email already exists.'
-    }
-    else if (err.name === 'InvalidPasswordException') {
-      errorMessage.value = 'Password does not meet requirements. Must include uppercase, lowercase, number, and symbol.'
-    }
-    else {
-      errorMessage.value = err.message || 'An error occurred. Please try again.'
-    }
+    errorMessage.value = mapAuthError(error)
   }
   finally {
     isLoading.value = false
@@ -100,10 +92,7 @@ async function handleSubmit() {
 
 <template>
   <div class="flex flex-col items-center gap-6">
-    <div>
-      <img src="/logo_dark.svg" alt="OpenFactCheck" class="h-12 dark:hidden">
-      <img src="/logo_light.svg" alt="OpenFactCheck" class="hidden h-12 dark:block">
-    </div>
+    <LogoImage class="h-12" />
     <Card class="w-full">
       <CardHeader class="text-center">
         <CardTitle class="text-xl">

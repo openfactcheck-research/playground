@@ -127,7 +127,13 @@ export async function apiRequest<T>(method: HttpMethod, path: string, body?: unk
       if (response.status === 204)
         return undefined as T
 
-      const data = await response.json()
+      let data: unknown
+      try {
+        data = await response.json()
+      }
+      catch {
+        throw new ApiError(response.statusText || 'Invalid JSON response', response.status)
+      }
 
       if (!response.ok) {
         if (isRetryable(null, response) && attempt === 0) {

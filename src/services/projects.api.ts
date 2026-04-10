@@ -11,10 +11,6 @@ export function fetchProjects(limit = 50, offset = 0): Promise<Project[]> {
   return apiRequest<Project[]>('GET', `${BASE}?limit=${limit}&offset=${offset}`)
 }
 
-export function fetchProject(id: string): Promise<Project> {
-  return apiRequest<Project>('GET', `${BASE}/${id}`)
-}
-
 export function createProjectApi(name: string, description = ''): Promise<Project> {
   return apiRequest<Project>('POST', BASE, { name, description })
 }
