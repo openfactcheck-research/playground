@@ -6,7 +6,7 @@ resource "aws_s3_bucket" "openfactcheck_playground_website" {
   bucket = "openfactcheck-playground-${terraform.workspace}-${var.aws_region}"
 
   tags = {
-    Name = "OpenFactCheck Playground Website - ${terraform.workspace}"
+    Name = "OpenFactCheck Playground Website - ${terraform.workspace} - ${var.aws_region}"
   }
 }
 

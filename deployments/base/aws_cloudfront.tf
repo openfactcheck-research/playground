@@ -61,7 +61,7 @@ resource "aws_cloudfront_distribution" "openfactcheck_playground" {
   }
 
   tags = {
-    Name = "OpenFactCheck Playground CDN - ${terraform.workspace}"
+    Name = "OpenFactCheck Playground CDN - ${terraform.workspace} - ${var.aws_region}"
   }
 }
 
@@ -70,7 +70,7 @@ resource "aws_cloudfront_distribution" "openfactcheck_playground" {
 # ##############################################################################
 
 resource "aws_cloudfront_origin_access_control" "openfactcheck_playground" {
-  name                              = "openfactcheck-playground-oac-${terraform.workspace}"
+  name                              = "openfactcheck-playground-oac-${terraform.workspace}-${var.aws_region}"
   description                       = "OAC for OpenFactCheck Playground S3 bucket"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
