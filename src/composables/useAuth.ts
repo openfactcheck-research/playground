@@ -5,32 +5,12 @@ const amplify = isAuthBypassed
   ? null
   : await import('aws-amplify/auth')
 
-// User preferences type
-export type UserPreferences = {
-  tourCompleted?: boolean
-}
-
 // Reactive auth state
 const isAuthenticated = ref(isAuthBypassed)
 const isLoading = ref(!isAuthBypassed)
 const user = ref<{ email: string, userId: string, name?: string } | null>(
   isAuthBypassed ? { email: 'dev@localhost', userId: 'dev', name: 'Dev User' } : null,
 )
-const preferences = ref<UserPreferences>({})
-
-/**
- * Parse preferences from Cognito attribute
- */
-function parsePreferences(prefsString: string | undefined): UserPreferences {
-  if (!prefsString)
-    return {}
-  try {
-    return JSON.parse(prefsString) as UserPreferences
-  }
-  catch {
-    return {}
-  }
-}
 
 export function useAuth() {
   /**
@@ -51,19 +31,16 @@ export function useAuth() {
           userId: currentUser.userId,
           name: attributes.name,
         }
-        preferences.value = parsePreferences(attributes['custom:preferences'])
         isAuthenticated.value = true
       }
       else {
         isAuthenticated.value = false
         user.value = null
-        preferences.value = {}
       }
     }
     catch {
       isAuthenticated.value = false
       user.value = null
-      preferences.value = {}
     }
     finally {
       isLoading.value = false
@@ -90,7 +67,6 @@ export function useAuth() {
         userId: currentUser.userId,
         name: attributes.name,
       }
-      preferences.value = parsePreferences(attributes['custom:preferences'])
       isAuthenticated.value = true
     }
 
@@ -185,22 +161,6 @@ export function useAuth() {
 
     isAuthenticated.value = false
     user.value = null
-    preferences.value = {}
-  }
-
-  /**
-   * Update user preferences stored in Cognito
-   */
-  async function updatePreferences(updates: Partial<UserPreferences>) {
-    const newPrefs = { ...preferences.value, ...updates }
-    if (!isAuthBypassed) {
-      await amplify!.updateUserAttributes({
-        userAttributes: {
-          'custom:preferences': JSON.stringify(newPrefs),
-        },
-      })
-    }
-    preferences.value = newPrefs
   }
 
   return {
@@ -208,7 +168,6 @@ export function useAuth() {
     isAuthenticated,
     isLoading,
     user,
-    preferences,
     // Methods
     checkAuth,
     signIn,
@@ -218,6 +177,5 @@ export function useAuth() {
     resetPassword,
     confirmResetPassword,
     signOut,
-    updatePreferences,
   }
 }

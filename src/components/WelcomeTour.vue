@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useAuth } from '@/composables/useAuth'
+import { usePreferences } from '@/composables/usePreferences'
 
 const emit = defineEmits<{
   close: []
 }>()
 
-const { preferences, updatePreferences } = useAuth()
+const { preferences, loadPreferences, updatePreferences } = usePreferences()
 
 const isVisible = ref(false)
 const currentStep = ref(1)
@@ -145,7 +145,8 @@ watch(currentStep, async () => {
 
 let resizeObserver: ResizeObserver | null = null
 
-onMounted(() => {
+onMounted(async () => {
+  await loadPreferences()
   if (!preferences.value.tourCompleted) {
     isVisible.value = true
     nextTick(() => updateTargetPosition())

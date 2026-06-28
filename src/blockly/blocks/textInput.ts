@@ -5,6 +5,7 @@ import { FieldBlockHeader } from '@/blockly/fields/fieldBlockHeader'
 import { FieldButton } from '@/blockly/fields/fieldButton'
 import { FieldRowButton } from '@/blockly/fields/fieldRowButton'
 import { FieldTextPreview } from '@/blockly/fields/fieldTextPreview'
+import { varNameFor } from './varNames'
 
 export const BLOCK_TYPE = 'text_input'
 
@@ -116,9 +117,13 @@ export function register(): void {
     },
   }
 
-  pythonGenerator.forBlock[BLOCK_TYPE] = function (block: Blockly.Block): string {
+  pythonGenerator.forBlock[BLOCK_TYPE] = function (
+    block: Blockly.Block,
+    generator: typeof pythonGenerator,
+  ): string {
     const text = block.getFieldValue('INPUT_TEXT') ?? ''
     const escaped = text.replace(/\\/g, '\\\\').replace(/"""/g, '\\"\\"\\"')
-    return `input_text = """${escaped}"""\n`
+    const varName = varNameFor(block, generator, 'input_text')
+    return `${varName} = """${escaped}"""\n`
   }
 }

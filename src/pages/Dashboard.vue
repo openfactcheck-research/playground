@@ -151,6 +151,13 @@ async function handleRun() {
   await executeRun(projectId.value, activeTabId.value, state)
 }
 
+function handleChangeView(view: string) {
+  if (view === 'settings')
+    router.push({ path: '/settings', query: { project: projectId.value } })
+  else
+    activeView.value = view
+}
+
 async function handleLogout() {
   await signOut()
   router.push('/login')
@@ -180,7 +187,7 @@ async function handleLogout() {
     <div class="flex flex-1 overflow-hidden">
       <Sidebar
         :active-view="activeView"
-        @change-view="activeView = $event"
+        @change-view="handleChangeView"
         @logout="handleLogout"
         @help="welcomeTourRef?.show()"
       />

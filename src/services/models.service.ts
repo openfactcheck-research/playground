@@ -9,7 +9,7 @@ const API_URL = 'https://models.dev/api.json'
 export const ALLOWED_PROVIDERS = [
   'openai',
   'anthropic',
-  'google',
+  'openrouter',
 ] as const
 
 export type ProviderId = typeof ALLOWED_PROVIDERS[number]
@@ -125,7 +125,6 @@ export async function getModelOptions(providerId: string): Promise<Array<[string
   const EXCLUDE: Record<string, RegExp> = {
     openai: /codex|embedding|deep-research|-\d{4}-\d{2}-\d{2}$/i,
     anthropic: /-\d{8}$/,
-    google: /embedding|image|tts|live|preview/i,
   }
 
   const options: Array<[string, string]> = []
@@ -152,9 +151,7 @@ export async function getModelOptions(providerId: string): Promise<Array<[string
 export const FALLBACK_PROVIDERS: Array<[string, string]> = [
   ['OpenAI', 'openai'],
   ['Anthropic', 'anthropic'],
-  ['Google', 'google'],
-  ['Mistral', 'mistral'],
-  ['Cohere', 'cohere'],
+  ['OpenRouter', 'openrouter'],
 ]
 
 export const FALLBACK_MODELS: Array<[string, string]> = [
