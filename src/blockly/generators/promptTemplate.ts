@@ -21,13 +21,12 @@ export function register(): void {
     const importLine = 'from openfactcheck.prompts import PromptTemplate'
       ; (generator as unknown as { definitions_: Record<string, string> }).definitions_[importLine] = importLine
 
-    // One (role, text) entry per non-empty part; fall back to a lone user
-    // message so a fresh block still emits a valid template.
+    // A completion needs a user turn: a lone body becomes the user message,
+    // and a system message is added only when it accompanies a user prompt.
     const parts: Array<[string, string]> = []
-    if (system.trim())
+    if (system.trim() && user.trim())
       parts.push(['system', system])
-    if (user.trim() || parts.length === 0)
-      parts.push(['user', user])
+    parts.push(['user', user.trim() ? user : system])
 
     const entries = parts
       .map(([role, text]) => `  ("${role}", """${escapeBody(text)}"""),`)

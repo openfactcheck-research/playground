@@ -1,10 +1,26 @@
 <script setup lang="ts">
 import type { Run } from '@/types/runs'
-import { CheckCircle, Loader2, Terminal, XCircle } from 'lucide-vue-next'
+import { Check, CheckCircle, Copy, Loader2, Terminal, XCircle } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import { Button } from '@/components/ui/button'
 
-defineProps<{
+const { run } = defineProps<{
   run: Run | null
 }>()
+
+const copied = ref(false)
+
+const copyText = computed(() => (run ? [run.error, run.output].filter(Boolean).join('\n\n') : ''))
+
+function copyOutput() {
+  if (!copyText.value)
+    return
+  navigator.clipboard.writeText(copyText.value)
+  copied.value = true
+  setTimeout(() => {
+    copied.value = false
+  }, 2000)
+}
 </script>
 
 <template>
@@ -23,8 +39,8 @@ defineProps<{
       </template>
     </div>
 
-    <!-- Content -->
-    <div class="flex-1 min-h-0 overflow-auto p-4 flex flex-col">
+    <!-- Content (select-text + stop so the panel's mousedown guard does not block selection) -->
+    <div class="flex-1 min-h-0 overflow-auto p-4 flex flex-col select-text" @mousedown.stop>
       <!-- Empty state -->
       <div v-if="!run" class="flex-1 flex flex-col items-center justify-center text-center">
         <Terminal :size="40" :stroke-width="1.5" class="mb-3 text-muted-foreground/30" />
@@ -44,7 +60,7 @@ defineProps<{
       <!-- Result -->
       <template v-else>
         <!-- Error -->
-        <div v-if="run.error" class="mb-3 rounded-md bg-red-500/10 px-3 py-2 text-xs text-red-500">
+        <div v-if="run.error" class="mb-3 whitespace-pre-wrap break-words rounded-md bg-red-500/10 px-3 py-2 font-mono text-xs text-red-500">
           {{ run.error }}
         </div>
 
@@ -61,6 +77,20 @@ defineProps<{
           </p>
         </div>
       </template>
+    </div>
+
+    <!-- Footer -->
+    <div v-if="copyText" class="shrink-0 border-t border-border px-3 py-2">
+      <Button
+        variant="secondary"
+        size="sm"
+        class="w-full"
+        @click="copyOutput"
+      >
+        <Check v-if="copied" :size="14" />
+        <Copy v-else :size="14" />
+        {{ copied ? 'Copied!' : 'Copy Output' }}
+      </Button>
     </div>
   </div>
 </template>
