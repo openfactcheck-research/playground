@@ -1,34 +1,45 @@
 <script setup lang="ts">
 import type * as Blockly from 'blockly/core'
 import { createHighlighter } from 'shiki'
-import { computed, ref, watch } from 'vue'
+import { reactive, watch } from 'vue'
 
 const props = defineProps<{
   block: Blockly.Block
 }>()
 
+// The template's two message bodies, each its own editor.
+const SECTIONS = [
+  { field: 'SYSTEM_TEXT', label: 'System', placeholder: 'Optional system prompt; may use {{variables}}.' },
+  { field: 'USER_TEXT', label: 'User', placeholder: 'User prompt. Use {{variable}} for run-time values.' },
+] as const
+
 // ---------------------------------------------------------------------------
-// Reactive binding to the Blockly field value.
+// Reactive binding to the Blockly field values.
 // ---------------------------------------------------------------------------
 
-const fieldValue = ref(props.block.getFieldValue('TEMPLATE_TEXT') ?? '')
+const values = reactive<Record<string, string>>({})
+const highlighted = reactive<Record<string, string>>({})
 
 watch(() => props.block, (blk) => {
-  fieldValue.value = blk.getFieldValue('TEMPLATE_TEXT') ?? ''
+  for (const { field } of SECTIONS) {
+    values[field] = blk.getFieldValue(field) ?? ''
+    void highlight(field)
+  }
 }, { immediate: true })
 
-function syncToBlock(value: string) {
-  fieldValue.value = value
-  props.block.setFieldValue(value, 'TEMPLATE_TEXT')
+function syncToBlock(field: string, value: string) {
+  values[field] = value
+  props.block.setFieldValue(value, field)
+  void highlight(field)
+}
+
+function charCount(field: string): number {
+  return (values[field] ?? '').length
 }
 
 // ---------------------------------------------------------------------------
 // Shiki highlighter (markdown, dual theme, line numbers).
 // ---------------------------------------------------------------------------
-
-const highlightedHtml = ref('')
-const textareaRef = ref<HTMLTextAreaElement>()
-const backdropRef = ref<HTMLElement>()
 
 let _highlighter: ReturnType<typeof createHighlighter> | null = null
 
@@ -39,16 +50,16 @@ function getHighlighter() {
   })
 }
 
-async function highlight() {
-  // Always generate HTML — use a zero-width space for empty content
-  // so Shiki produces at least one line (keeps line numbers visible).
-  const source = fieldValue.value || '\u200B'
+async function highlight(field: string) {
+  // Use a zero-width space for empty content so Shiki produces at least one
+  // line (keeps line numbers visible).
+  const source = values[field] || '​'
 
   const highlighter = await getHighlighter()
   // Strip newlines from the HTML output: Shiki puts \n between <span class="line"> elements
   // inside <pre>. With white-space: pre-wrap + display:block on .line, those \n text nodes
   // render as blank visual rows, shifting every line down by one row vs the textarea.
-  highlightedHtml.value = highlighter.codeToHtml(source, {
+  highlighted[field] = highlighter.codeToHtml(source, {
     lang: 'markdown',
     themes: {
       dark: 'vitesse-dark',
@@ -70,79 +81,58 @@ async function highlight() {
   })
 }
 
-watch(fieldValue, highlight, { immediate: true })
-
 // ---------------------------------------------------------------------------
-// Sync scroll between textarea and backdrop.
+// Sync scroll between each textarea and its backdrop (the preceding sibling).
 // ---------------------------------------------------------------------------
 
-function syncScroll() {
-  if (textareaRef.value && backdropRef.value) {
-    backdropRef.value.scrollTop = textareaRef.value.scrollTop
-    backdropRef.value.scrollLeft = textareaRef.value.scrollLeft
+function syncScroll(event: Event) {
+  const textarea = event.target as HTMLTextAreaElement
+  const backdrop = textarea.previousElementSibling as HTMLElement | null
+  if (backdrop) {
+    backdrop.scrollTop = textarea.scrollTop
+    backdrop.scrollLeft = textarea.scrollLeft
   }
 }
-
-// ---------------------------------------------------------------------------
-// Line count.
-// ---------------------------------------------------------------------------
-
-const lineCount = computed(() => {
-  if (!fieldValue.value)
-    return 0
-  return fieldValue.value.split('\n').length
-})
-
-// ---------------------------------------------------------------------------
-// Character count.
-// ---------------------------------------------------------------------------
-
-const charCount = computed(() => fieldValue.value.length)
 </script>
 
 <template>
-  <div class="flex flex-1 flex-col gap-3">
-    <!-- Status badges -->
-    <div class="flex items-center gap-1.5">
-      <span
-        v-if="fieldValue"
-        class="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary"
-      >
-        {{ lineCount }} line{{ lineCount !== 1 ? 's' : '' }}
-      </span>
-      <span
-        v-if="fieldValue"
-        class="ml-auto rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary"
-      >
-        {{ charCount }} char{{ charCount !== 1 ? 's' : '' }}
-      </span>
-      <span
-        v-if="!fieldValue"
-        class="ml-auto rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
-      >
-        Empty
-      </span>
-    </div>
+  <div class="flex flex-1 flex-col gap-4 min-h-0">
+    <div v-for="section in SECTIONS" :key="section.field" class="flex flex-1 flex-col gap-2 min-h-0">
+      <!-- Section header -->
+      <div class="flex items-center gap-1.5">
+        <span class="text-xs font-medium text-foreground">{{ section.label }}</span>
+        <span
+          v-if="values[section.field]"
+          class="ml-auto rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary"
+        >
+          {{ charCount(section.field) }} char{{ charCount(section.field) !== 1 ? 's' : '' }}
+        </span>
+        <span
+          v-else
+          class="ml-auto rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+        >
+          Empty
+        </span>
+      </div>
 
-    <!-- Editor: textarea overlay on Shiki backdrop -->
-    <div class="prompt-editor relative flex-1 min-h-0 overflow-hidden rounded-md border border-input shadow-xs focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
-      <!-- Shiki highlighted backdrop -->
-      <div
-        ref="backdropRef"
-        class="prompt-backdrop absolute inset-0 overflow-hidden pointer-events-none"
-        v-html="highlightedHtml"
-      />
+      <!-- Editor: textarea overlay on Shiki backdrop -->
+      <div class="prompt-editor relative flex-1 min-h-0 overflow-hidden rounded-md border border-input shadow-xs focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+        <!-- Shiki highlighted backdrop -->
+        <div
+          class="prompt-backdrop absolute inset-0 overflow-hidden pointer-events-none"
+          v-html="highlighted[section.field]"
+        />
 
-      <!-- Transparent textarea on top -->
-      <textarea
-        ref="textareaRef"
-        :value="fieldValue"
-        placeholder="Write your prompt template... Use {variable_name} for placeholders."
-        class="prompt-textarea absolute inset-0 w-full h-full resize-none bg-transparent p-0 text-transparent caret-foreground outline-none placeholder:text-muted-foreground"
-        spellcheck="false"
-        @input="syncToBlock(($event.target as HTMLTextAreaElement).value)"
-        @scroll="syncScroll"
-      />
+        <!-- Transparent textarea on top -->
+        <textarea
+          :value="values[section.field]"
+          :placeholder="section.placeholder"
+          class="prompt-textarea absolute inset-0 w-full h-full resize-none bg-transparent p-0 text-transparent caret-foreground outline-none placeholder:text-muted-foreground"
+          spellcheck="false"
+          @input="syncToBlock(section.field, ($event.target as HTMLTextAreaElement).value)"
+          @scroll="syncScroll"
+        />
+      </div>
     </div>
   </div>
 </template>

@@ -1,12 +1,11 @@
 import * as Blockly from 'blockly/core'
-import { Order, pythonGenerator } from 'blockly/python'
 import { FieldBlockHeader } from '@/blockly/fields/fieldBlockHeader'
 import { FieldTextPreview } from '@/blockly/fields/fieldTextPreview'
-import { varNameFor } from './varNames'
 
 export const BLOCK_TYPE = 'prompt_template'
 
 const BLOCK_WIDTH = 160
+const ROW_WIDTH = 193 // content row width, matches FieldTextPreview width used across blocks
 
 // Lucide "file-text" icon scaled to 12×12
 const ICON_FILE_TEXT
@@ -16,48 +15,17 @@ const ICON_FILE_TEXT
 // Helpers
 // ---------------------------------------------------------------------------
 
-function extractVariables(template: string): string[] {
+// Variables referenced across the template's system and user bodies, in
+// first-seen order. Either body may carry {{placeholders}}; the union is the
+// template's variable contract.
+export function templateVariables(templateBlock: Blockly.Block): string[] {
+  const text = `${templateBlock.getFieldValue('SYSTEM_TEXT') ?? ''}\n${templateBlock.getFieldValue('USER_TEXT') ?? ''}`
   const vars: string[] = []
-  for (const match of template.matchAll(/\{\{(\w+)\}\}/g)) {
+  for (const match of text.matchAll(/\{\{(\w+)\}\}/g)) {
     if (!vars.includes(match[1]!))
       vars.push(match[1]!)
   }
   return vars
-}
-
-function updateVariableInputs(block: Blockly.Block, template: string): void {
-  const variables = extractVariables(template)
-
-  const currentVarInputs = block.inputList
-    .filter(i => i.name.startsWith('VAR_'))
-    .map(i => i.name)
-
-  const toRemove = currentVarInputs.filter(
-    name => !variables.includes(name.slice(4).toLowerCase()),
-  )
-  const toAdd = variables.filter(v => !block.getInput(`VAR_${v.toUpperCase()}`))
-
-  if (toRemove.length === 0 && toAdd.length === 0)
-    return
-
-  setTimeout(() => {
-    Blockly.Events.disable()
-    try {
-      for (const name of toRemove)
-        block.removeInput(name, true)
-      for (const v of toAdd) {
-        block.appendValueInput(`VAR_${v.toUpperCase()}`)
-          .setCheck(null)
-          .setAlign(Blockly.inputs.Align.RIGHT)
-          .appendField(v)
-      }
-    }
-    finally {
-      Blockly.Events.enable()
-    }
-    ;(block as Blockly.BlockSvg).initSvg?.()
-    ;(block as Blockly.BlockSvg).render?.()
-  }, 0)
 }
 
 // ---------------------------------------------------------------------------
@@ -71,60 +39,33 @@ export function register(): void {
         .setAlign(Blockly.inputs.Align.LEFT)
         .appendField(new FieldBlockHeader('Prompt Template', ICON_FILE_TEXT, BLOCK_WIDTH))
 
-      this.appendDummyInput('TEMPLATE_TEXT_ROW')
+      this.appendDummyInput('SYSTEM_ROW')
         .setAlign(Blockly.inputs.Align.RIGHT)
-        .appendField(new FieldTextPreview('Enter your prompt template...', 193), 'TEMPLATE_TEXT')
+        .appendField('System')
+        .appendField(new FieldTextPreview('System prompt, with {{vars}}...', ROW_WIDTH), 'SYSTEM_TEXT')
 
-      this.setStyle('models_blocks')
+      this.appendDummyInput('USER_ROW')
+        .setAlign(Blockly.inputs.Align.RIGHT)
+        .appendField('User')
+        .appendField(new FieldTextPreview('User prompt, with {{vars}}...', ROW_WIDTH), 'USER_TEXT')
+
+      this.setStyle('prompt_blocks')
       this.setPreviousStatement(true, 'PromptTemplate')
       this.setNextStatement(true, 'PromptTemplate')
     },
 
-    onchange(this: Blockly.Block, e: Blockly.Events.Abstract) {
-      if (e.type !== Blockly.Events.BLOCK_CHANGE)
-        return
-      const change = e as Blockly.Events.BlockChange
-      if (change.blockId === this.id && change.name === 'TEMPLATE_TEXT')
-        updateVariableInputs(this, change.newValue as string)
-    },
-
     saveExtraState(this: Blockly.Block) {
-      return { template: this.getFieldValue('TEMPLATE_TEXT') ?? '' }
+      return {
+        system: this.getFieldValue('SYSTEM_TEXT') ?? '',
+        user: this.getFieldValue('USER_TEXT') ?? '',
+      }
     },
 
-    loadExtraState(this: Blockly.Block, state: { template: string }) {
-      if (state.template)
-        updateVariableInputs(this, state.template)
+    loadExtraState(this: Blockly.Block, state: { system?: string, user?: string }) {
+      if (state.system)
+        this.setFieldValue(state.system, 'SYSTEM_TEXT')
+      if (state.user)
+        this.setFieldValue(state.user, 'USER_TEXT')
     },
-  }
-
-  // ---------------------------------------------------------------------------
-  // Python generator
-  // ---------------------------------------------------------------------------
-
-  pythonGenerator.forBlock[BLOCK_TYPE] = function (
-    block: Blockly.Block,
-    generator: typeof pythonGenerator,
-  ): string {
-    const template = block.getFieldValue('TEMPLATE_TEXT') ?? ''
-    const variables = extractVariables(template)
-    const varName = varNameFor(block, generator, 'prompt_template')
-
-    let escaped = template
-      .replace(/\\/g, '\\\\')
-      .replace(/"""/g, '\\"\\"\\"')
-
-    if (variables.length === 0) {
-      return `${varName} = """${escaped}"""\n`
-    }
-
-    const formatArgs: string[] = []
-    for (const v of variables) {
-      const value = generator.valueToCode(block, `VAR_${v.toUpperCase()}`, Order.ATOMIC) || '""'
-      formatArgs.push(`${v}=${value}`)
-      escaped = escaped.replace(new RegExp(`\\{\\{${v}\\}\\}`, 'g'), `{${v}}`)
-    }
-
-    return `${varName} = """${escaped}""".format(${formatArgs.join(', ')})\n`
   }
 }

@@ -374,6 +374,7 @@ type PaletteKey = keyof Palette
 
 const CATEGORY_COLOUR_MAP: Record<string, PaletteKey> = {
   models: 'violet',
+  prompt: 'indigo',
   io: 'sky',
   logic: 'blue',
   loop: 'green',

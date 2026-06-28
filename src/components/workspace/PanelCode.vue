@@ -177,6 +177,7 @@ function copyCode() {
   padding-inline: 0.75rem;
   padding-left: 2rem;
   position: relative;
+  min-height: 1.5em; /* keep empty lines a full row tall so blank lines and their line numbers don't collapse */
 }
 
 .shiki-wrapper code .line::before {

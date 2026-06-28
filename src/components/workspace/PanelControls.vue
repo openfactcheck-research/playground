@@ -29,6 +29,7 @@ const resolvedBlock = computed(() => {
 // Per-block Lucide icons for custom blocks
 const BLOCK_ICONS: Record<string, Component> = {
   text_input: Type,
+  text_input_value: Type,
   language_model: Sparkles,
   prompt_template: FileText,
   structured_output: LayoutList,
@@ -109,7 +110,7 @@ onBeforeUnmount(() => {
 
         <!-- Block-specific controls -->
         <TextInputControls
-          v-if="selectedBlock.blockType === 'text_input' && resolvedBlock"
+          v-if="(selectedBlock.blockType === 'text_input' || selectedBlock.blockType === 'text_input_value') && resolvedBlock"
           :block="resolvedBlock"
         />
         <LanguageModelControls

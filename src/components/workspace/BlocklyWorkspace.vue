@@ -9,8 +9,10 @@ import { pythonGenerator } from 'blockly/python'
 import { ChevronLeft } from 'lucide-vue-next'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { registerAllBlocks } from '@/blockly/blocks'
-import { setVerbose as setTextInputVerbose, BLOCK_TYPE as TEXT_INPUT_TYPE } from '@/blockly/blocks/textInput'
+import { BLOCK_TYPE as LANGUAGE_MODEL_TYPE, setVerbose as setLanguageModelVerbose } from '@/blockly/blocks/languageModel'
+import { setVerbose as setTextInputVerbose, BLOCK_TYPE as TEXT_INPUT_TYPE, VALUE_BLOCK_TYPE as TEXT_INPUT_VALUE_TYPE } from '@/blockly/blocks/textInput'
 import { openPrompt } from '@/blockly/dialogs/urlPromptBridge'
+import { registerAllGenerators } from '@/blockly/generators'
 import { createTheme } from '@/blockly/theme'
 import { toolboxConfig } from '@/blockly/toolbox'
 import BlocklyToolbar from '@/components/workspace/BlockToolbar.vue'
@@ -50,6 +52,7 @@ export type SelectedBlockInfo = {
 }
 
 registerAllBlocks()
+registerAllGenerators()
 Blockly.setLocale(En as unknown as Record<string, string>)
 
 // Events that trigger code regeneration
@@ -766,15 +769,19 @@ onBeforeUnmount(() => {
 
 const { verboseMode } = useVerboseMode(() => props.projectId, () => props.workspaceId)
 
+function applyVerboseToBlock(block: Blockly.Block, verbose: boolean): void {
+  if (block.type === TEXT_INPUT_TYPE || block.type === TEXT_INPUT_VALUE_TYPE)
+    setTextInputVerbose(block, verbose)
+  else if (block.type === LANGUAGE_MODEL_TYPE)
+    setLanguageModelVerbose(block, verbose)
+}
+
 function applyVerboseToAll() {
   if (!_workspace)
     return
   const verbose = verboseMode.value
-  for (const block of _workspace.getAllBlocks(false)) {
-    if (block.type === TEXT_INPUT_TYPE) {
-      setTextInputVerbose(block, verbose)
-    }
-  }
+  for (const block of _workspace.getAllBlocks(false))
+    applyVerboseToBlock(block, verbose)
 }
 
 watch(verboseMode, () => applyVerboseToAll())

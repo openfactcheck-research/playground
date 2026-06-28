@@ -1,5 +1,4 @@
 import * as Blockly from 'blockly/core'
-import { pythonGenerator } from 'blockly/python'
 import { FieldBlockHeader } from '@/blockly/fields/fieldBlockHeader'
 import { FieldHidden } from '@/blockly/fields/fieldHidden'
 import { FieldRowButton } from '@/blockly/fields/fieldRowButton'
@@ -28,13 +27,8 @@ export function register(): void {
           window.dispatchEvent(new CustomEvent('blockly:open-controls'))
         }, ROW_WIDTH, ICON_TABLE))
 
-      this.setStyle('models_blocks')
-      this.setPreviousStatement(true, null)
-      this.setNextStatement(true, null)
+      this.setStyle('io_blocks')
+      this.setPreviousStatement(true, 'StructuredOutput')
     },
-  }
-
-  pythonGenerator.forBlock[BLOCK_TYPE] = (): string => {
-    return ''
   }
 }
