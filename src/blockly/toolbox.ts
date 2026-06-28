@@ -78,12 +78,15 @@ const variablesCategory = category('Variables', 'variable_category', undefined, 
 const functionsCategory = category('Functions', 'procedure_category', undefined, 'PROCEDURE')
 const ioCategory = category('Input & Output', 'io_category', [
   block('text_input'),
+  block('text_input_value'),
+  block('structured_output'),
 ])
 const modelsAgentsCategory = category('Models & Agents', 'models_category', [
   block('agent'),
   block('language_model'),
+])
+const promptsCategory = category('Prompts', 'prompt_category', [
   block('prompt_template'),
-  block('structured_output'),
 ])
 
 export const toolboxConfig = {
@@ -91,6 +94,7 @@ export const toolboxConfig = {
   contents: [
     ioCategory,
     modelsAgentsCategory,
+    promptsCategory,
     sep(),
     logicCategory,
     loopsCategory,

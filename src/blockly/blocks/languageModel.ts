@@ -1,7 +1,6 @@
 import type { ModelInfo } from '@/services/models.service'
 import { FieldSlider } from '@blockly/field-slider'
 import * as Blockly from 'blockly/core'
-import { pythonGenerator } from 'blockly/python'
 import { FieldBlockHeader } from '@/blockly/fields/fieldBlockHeader'
 import {
   FALLBACK_MODELS,
@@ -11,7 +10,6 @@ import {
   getModelOptions,
   getProviderOptions,
 } from '@/services/models.service'
-import { varNameFor } from './varNames'
 
 export const BLOCK_TYPE = 'language_model'
 
@@ -29,13 +27,6 @@ const BLOCK_WIDTH = 160
 
 // Lucide sparkles path scaled to 12×12 (÷2 from 24×24 source)
 const ICON_SPARKLES = 'M4.969 7.75A1 1 0 0 0 4.25 7.031l-3.068-.791a.25.25 0 0 1 0-.481L4.25 4.969A1 1 0 0 0 4.969 4.25l.791-3.068a.25.25 0 0 1 .481 0L7.031 4.25A1 1 0 0 0 7.75 4.969l3.068.791a.25.25 0 0 1 0 .481L7.75 7.031a1 1 0 0 0-.719.719l-.791 3.068a.25.25 0 0 1-.481 0z M10 1.5v2 M11 2.5h-2 M2 8.5v1 M2.5 9H1.5'
-
-// Maps the block's provider onto the chat layer's per-provider config class.
-const CONFIG_CLASS: Record<string, string> = {
-  openai: 'OpenAIConfig',
-  anthropic: 'AnthropicConfig',
-  openrouter: 'OpenRouterConfig',
-}
 
 // Parameter rows, in display order, added/removed based on the selected model's capabilities.
 const PARAM_ROWS = ['TEMPERATURE_ROW', 'TOP_P_ROW', 'MAX_TOKENS_ROW', 'FREQ_PENALTY_ROW', 'PRES_PENALTY_ROW', 'REASONING_EFFORT_ROW']
@@ -289,6 +280,33 @@ function applyModelParams(block: Blockly.Block, info: ModelInfo | null): void {
   applyFreqPenaltyRow(block, supportsTemp)
   applyPresPenaltyRow(block, supportsTemp)
   applyReasoningEffortRow(block, isReasoningOnly)
+  // Honour the current view for whichever rows the model just enabled.
+  applyParamVisibility(block)
+}
+
+// Show or hide every present parameter row to match the block's view flag.
+// Hiding (rather than removing) keeps the fields intact, so the model's
+// capability-driven rows, the controls panel, and the generated code are all
+// unaffected by the view toggle.
+function applyParamVisibility(block: Blockly.Block): void {
+  const visible = (block as Blockly.Block & { __verbose?: boolean }).__verbose !== false
+  let changed = false
+  for (const row of PARAM_ROWS) {
+    const input = block.getInput(row)
+    if (input && input.isVisible() !== visible) {
+      input.setVisible(visible)
+      changed = true
+    }
+  }
+  if (changed)
+    (block as Blockly.BlockSvg).render?.()
+}
+
+// Toggle between the compact view (provider and model only) and the full view
+// (all applicable parameter rows).
+export function setVerbose(block: Blockly.Block, verbose: boolean): void {
+  ;(block as Blockly.Block & { __verbose: boolean }).__verbose = verbose
+  applyParamVisibility(block)
 }
 
 function updateTemperatureRow(block: Blockly.Block, providerId: string, modelId: string): void {
@@ -419,40 +437,5 @@ export function register(): void {
       ;(this as any).__pendingPresPenalty = state?.presPenalty ?? null
       ;(this as any).__pendingReasoningEffort = state?.reasoningEffort ?? null
     },
-  }
-
-  pythonGenerator.forBlock[BLOCK_TYPE] = (
-    block: Blockly.Block,
-    generator: typeof pythonGenerator,
-  ): string => {
-    const provider = block.getFieldValue('PROVIDER') ?? 'openai'
-    const model = block.getFieldValue('MODEL') ?? ''
-    const configClass = CONFIG_CLASS[provider] ?? 'OpenAIConfig'
-    const openAICompatible = provider === 'openai' || provider === 'openrouter'
-
-    // Map the visible block fields onto the provider config, using the chat layer's
-    // own field names and skipping fields the chosen provider's config does not accept.
-    const config: string[] = [`model="${model}"`]
-    if (block.getInput('TEMPERATURE_ROW'))
-      config.push(`temperature=${block.getFieldValue('TEMPERATURE') ?? 0.7}`)
-    if (block.getInput('TOP_P_ROW'))
-      config.push(`top_p=${block.getFieldValue('TOP_P') ?? 1.0}`)
-    if (block.getInput('MAX_TOKENS_ROW'))
-      config.push(`max_output_tokens=${block.getFieldValue('MAX_TOKENS') ?? 4096}`)
-    if (openAICompatible && block.getInput('FREQ_PENALTY_ROW'))
-      config.push(`frequency_penalty=${block.getFieldValue('FREQ_PENALTY') ?? 0}`)
-    if (openAICompatible && block.getInput('PRES_PENALTY_ROW'))
-      config.push(`presence_penalty=${block.getFieldValue('PRES_PENALTY') ?? 0}`)
-    if (openAICompatible && block.getInput('REASONING_EFFORT_ROW'))
-      config.push(`reasoning_effort="${block.getFieldValue('REASONING_EFFORT') ?? 'medium'}"`)
-
-    // Hoist the import: Blockly groups import statements into one block at the top.
-    // The API key is resolved server-side from the user's stored secrets, so none is emitted here.
-    const importLine = `from openfactcheck.chat import ${['ChatClient', configClass].sort().join(', ')}`
-    ;(generator as unknown as { definitions_: Record<string, string> }).definitions_[importLine] = importLine
-
-    const configArgs = config.map(arg => `        ${arg},`).join('\n')
-    const varName = varNameFor(block, generator, 'client')
-    return `${varName} = ChatClient(\n    config=${configClass}(\n${configArgs}\n    ),\n)\n`
   }
 }

@@ -1,15 +1,19 @@
 import SAMPLES from '@data/templates/textInputSamples.json'
 import * as Blockly from 'blockly/core'
-import { pythonGenerator } from 'blockly/python'
 import { FieldBlockHeader } from '@/blockly/fields/fieldBlockHeader'
 import { FieldButton } from '@/blockly/fields/fieldButton'
 import { FieldRowButton } from '@/blockly/fields/fieldRowButton'
 import { FieldTextPreview } from '@/blockly/fields/fieldTextPreview'
-import { varNameFor } from './varNames'
 
+// The same "Input Text" block in two connection flavors: a statement that
+// assigns `input_text`, and a value that yields the string expression.
 export const BLOCK_TYPE = 'text_input'
+export const VALUE_BLOCK_TYPE = 'text_input_value'
 
 const BLOCK_WIDTH = 160
+
+// Lucide "text-cursor-input" header icon, scaled to 12×12
+const ICON_INPUT = 'M6 2v8 M2 3.5V2.5a0.5 0.5 0 0 1 0.5-0.5h7a0.5 0.5 0 0 1 0.5 0.5v1 M4.5 10h3'
 
 // Lucide 24×24 path data for each button icon
 const ICON_REFRESH = 'M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8m0-5v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16m0 5v-5h5'
@@ -100,30 +104,31 @@ export function setVerbose(block: Blockly.Block, verbose: boolean): void {
   }
 }
 
-export function register(): void {
-  Blockly.Blocks[BLOCK_TYPE] = {
+// Define the block in one connection flavor. `asValue` swaps the statement
+// connection for a value output; everything else is identical.
+function defineInputBlock(type: string, asValue: boolean): void {
+  Blockly.Blocks[type] = {
     init(this: Blockly.Block): void {
       this.appendDummyInput()
-        .appendField(new FieldBlockHeader('Input Text', 'M6 2v8 M2 3.5V2.5a0.5 0.5 0 0 1 0.5-0.5h7a0.5 0.5 0 0 1 0.5 0.5v1 M4.5 10h3', BLOCK_WIDTH))
+        .appendField(new FieldBlockHeader('Input Text', ICON_INPUT, BLOCK_WIDTH))
 
       this.appendDummyInput('INPUT_TEXT_ROW')
         .setAlign(Blockly.inputs.Align.RIGHT)
         .appendField(new FieldTextPreview('Enter your text here...', 193), 'INPUT_TEXT')
 
-      this.setNextStatement(true, null)
+      if (asValue)
+        this.setOutput(true, null)
+      else
+        this.setNextStatement(true, null)
+
       this.setInputsInline(false)
       this.setStyle('io_blocks')
-      this.setTooltip('Starting block — type your text directly')
+      this.setTooltip('Type your text directly')
     },
   }
+}
 
-  pythonGenerator.forBlock[BLOCK_TYPE] = function (
-    block: Blockly.Block,
-    generator: typeof pythonGenerator,
-  ): string {
-    const text = block.getFieldValue('INPUT_TEXT') ?? ''
-    const escaped = text.replace(/\\/g, '\\\\').replace(/"""/g, '\\"\\"\\"')
-    const varName = varNameFor(block, generator, 'input_text')
-    return `${varName} = """${escaped}"""\n`
-  }
+export function register(): void {
+  defineInputBlock(BLOCK_TYPE, false)
+  defineInputBlock(VALUE_BLOCK_TYPE, true)
 }
