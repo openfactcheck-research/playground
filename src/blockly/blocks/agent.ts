@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { pythonGenerator } from 'blockly/python'
 import { FieldBlockHeader } from '@/blockly/fields/fieldBlockHeader'
+import { varNameFor } from './varNames'
 
 export const BLOCK_TYPE = 'agent'
 
@@ -43,8 +44,13 @@ export function register(): void {
   ): string => {
     const promptBlock = block.getInputTargetBlock('PROMPT')
     const modelBlock = block.getInputTargetBlock('MODEL')
+    // Generate the children first so each one allocates its variable name, then read
+    // those real names back so this agent references the right prompt and model.
     const promptCode = promptBlock ? (generator.blockToCode(promptBlock) as string) : ''
     const modelCode = modelBlock ? (generator.blockToCode(modelBlock) as string) : ''
-    return `${promptCode}${modelCode}agent = Agent(prompt_template=prompt_template, language_model=language_model)\n`
+    const promptVar = promptBlock ? varNameFor(promptBlock, generator, 'prompt_template') : 'prompt_template'
+    const modelVar = modelBlock ? varNameFor(modelBlock, generator, 'client') : 'client'
+    const agentVar = varNameFor(block, generator, 'agent')
+    return `${promptCode}${modelCode}${agentVar} = Agent(prompt_template=${promptVar}, language_model=${modelVar})\n`
   }
 }

@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import type * as Blockly from 'blockly/core'
 import type { AcceptableValue } from 'reka-ui'
-import { Eye, EyeOff } from 'lucide-vue-next'
 import { onMounted, ref, watch } from 'vue'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -14,12 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { getModelOptions, getProviderOptions } from '@/services/models.service'
 
 const props = defineProps<{
@@ -82,18 +75,6 @@ function syncModel(value: AcceptableValue) {
     refreshPresPenalty()
     refreshReasoningEffort()
   }, 200)
-}
-
-// ---------------------------------------------------------------------------
-// API Key.
-// ---------------------------------------------------------------------------
-
-const apiKey = ref(props.block.getFieldValue('API_KEY') ?? '')
-const showKey = ref(false)
-
-function syncApiKey(value: string) {
-  apiKey.value = value
-  props.block.setFieldValue(value, 'API_KEY')
 }
 
 // ---------------------------------------------------------------------------
@@ -267,38 +248,6 @@ function syncReasoningEffort(value: AcceptableValue) {
             </SelectItem>
           </SelectContent>
         </Select>
-      </div>
-
-      <!-- API Key -->
-      <div class="flex flex-col gap-1.5">
-        <Label class="text-[10px] uppercase tracking-wide text-muted-foreground/60">
-          API Key
-        </Label>
-        <div class="relative">
-          <Input
-            :model-value="apiKey"
-            :type="showKey ? 'text' : 'password'"
-            placeholder="Paste your API key…"
-            class="h-8 pr-8 font-mono text-xs"
-            @update:model-value="syncApiKey(String($event))"
-          />
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                class="absolute right-0 top-0 h-8 w-8 text-muted-foreground"
-                @click="showKey = !showKey"
-              >
-                <EyeOff v-if="showKey" :size="14" />
-                <Eye v-else :size="14" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {{ showKey ? 'Hide key' : 'Show key' }}
-            </TooltipContent>
-          </Tooltip>
-        </div>
       </div>
 
       <!-- Temperature -->

@@ -5,6 +5,7 @@ import DashboardPage from '@/pages/Dashboard.vue'
 import ForgotPasswordPage from '@/pages/ForgotPassword.vue'
 import LoginPage from '@/pages/Login.vue'
 import ProjectsPage from '@/pages/Projects.vue'
+import SettingsPage from '@/pages/Settings.vue'
 import SignupPage from '@/pages/Signup.vue'
 import VerifyPage from '@/pages/Verify.vue'
 import WelcomePage from '@/pages/Welcome.vue'
@@ -56,6 +57,12 @@ const router = createRouter({
       path: '/dashboard/:projectId',
       name: 'dashboard',
       component: DashboardPage,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: SettingsPage,
       meta: { requiresAuth: true },
     },
   ],

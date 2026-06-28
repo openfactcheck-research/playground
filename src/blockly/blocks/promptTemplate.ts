@@ -2,6 +2,7 @@ import * as Blockly from 'blockly/core'
 import { Order, pythonGenerator } from 'blockly/python'
 import { FieldBlockHeader } from '@/blockly/fields/fieldBlockHeader'
 import { FieldTextPreview } from '@/blockly/fields/fieldTextPreview'
+import { varNameFor } from './varNames'
 
 export const BLOCK_TYPE = 'prompt_template'
 
@@ -107,13 +108,14 @@ export function register(): void {
   ): string {
     const template = block.getFieldValue('TEMPLATE_TEXT') ?? ''
     const variables = extractVariables(template)
+    const varName = varNameFor(block, generator, 'prompt_template')
 
     let escaped = template
       .replace(/\\/g, '\\\\')
       .replace(/"""/g, '\\"\\"\\"')
 
     if (variables.length === 0) {
-      return `prompt_template = """${escaped}"""\n`
+      return `${varName} = """${escaped}"""\n`
     }
 
     const formatArgs: string[] = []
@@ -123,6 +125,6 @@ export function register(): void {
       escaped = escaped.replace(new RegExp(`\\{\\{${v}\\}\\}`, 'g'), `{${v}}`)
     }
 
-    return `prompt_template = """${escaped}""".format(${formatArgs.join(', ')})\n`
+    return `${varName} = """${escaped}""".format(${formatArgs.join(', ')})\n`
   }
 }
