@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
 import type { Secret } from '@/types/secrets'
-import { KeyRound, Plus, Trash2 } from 'lucide-vue-next'
+import { KeyRound, Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import LogoImage from '@/components/LogoImage.vue'
@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useProjects } from '@/composables/useProjects'
 import { useSecrets } from '@/composables/useSecrets'
 import { formatTimeAgo } from '@/lib/utils'
@@ -165,9 +166,13 @@ onMounted(() => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Last updated</TableHead>
-                  <TableHead class="w-0" />
+                  <TableHead class="w-44">
+                    Type
+                  </TableHead>
+                  <TableHead class="w-40">
+                    Last updated
+                  </TableHead>
+                  <TableHead class="w-36" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -187,12 +192,26 @@ onMounted(() => {
                     {{ formatTimeAgo(secret.updatedAt) }}
                   </TableCell>
                   <TableCell class="whitespace-nowrap text-right">
-                    <Button size="sm" variant="ghost" @click="openEdit(secret)">
-                      Edit
-                    </Button>
-                    <Button size="sm" variant="ghost" aria-label="Delete secret" @click="removeSecret(secret.name)">
-                      <Trash2 :size="14" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <Button size="sm" variant="ghost" aria-label="Edit" @click="openEdit(secret)">
+                          <Pencil :size="14" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        Edit
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <Button size="sm" variant="ghost" aria-label="Delete" @click="removeSecret(secret.name)">
+                          <Trash2 :size="14" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        Delete
+                      </TooltipContent>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               </TableBody>
@@ -219,6 +238,10 @@ onMounted(() => {
               :disabled="editingName !== null"
               placeholder="OPENAI_API_KEY"
               autocomplete="off"
+              data-1p-ignore
+              data-lpignore="true"
+              data-bwignore
+              data-form-type="other"
               :aria-invalid="!!nameError"
               @keydown.enter="submit"
             />
@@ -228,11 +251,22 @@ onMounted(() => {
           </div>
           <div class="grid gap-2">
             <Label>Value</Label>
+            <!-- Masked with a dot-glyph font (mask-secret), never type="password" or
+                 -webkit-text-security: both make Safari / Apple Passwords treat this as a
+                 saved password. Applied only when there is a value so the placeholder stays readable. -->
             <Input
               v-model="formValue"
-              type="password"
+              type="text"
               :placeholder="editingName ? 'Enter a new value' : 'value'"
               autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              data-1p-ignore
+              data-lpignore="true"
+              data-bwignore
+              data-form-type="other"
+              :class="formValue ? 'mask-secret' : ''"
               @keydown.enter="submit"
             />
           </div>

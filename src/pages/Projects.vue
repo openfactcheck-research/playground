@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Copy, Download, EllipsisVertical, LogOut, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
+import { Copy, Download, EllipsisVertical, LogOut, Pencil, Plus, Search, Settings, Trash2 } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import ConfirmDelete from '@/components/dialogs/ConfirmDelete.vue'
@@ -289,6 +289,15 @@ onUnmounted(() => {
 
       <!-- Bottom section -->
       <div class="border-t border-border p-2">
+        <!-- Settings -->
+        <button
+          class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+          @click="router.push('/settings')"
+        >
+          <Settings :size="16" />
+          Settings
+        </button>
+
         <!-- Theme toggle -->
         <ThemeToggle
           show-label

@@ -114,3 +114,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Mask secret inputs with a dot-glyph font rather than type="password" or
+   -webkit-text-security. Both of those make Safari and Apple Passwords treat the
+   field as a saved password and offer to autofill it; a font is invisible to that
+   heuristic, so the value still renders as dots without triggering it. Unlayered so
+   it wins over the Geist font-family in @layer base. */
+.mask-secret {
+  font-family: 'text-security-disc';
+}
