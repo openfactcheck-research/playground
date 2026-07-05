@@ -153,7 +153,7 @@ async function handleRun() {
 
 function handleChangeView(view: string) {
   if (view === 'settings')
-    router.push({ path: '/settings', query: { project: projectId.value } })
+    router.push({ name: 'project-settings', params: { projectId: projectId.value } })
   else
     activeView.value = view
 }
