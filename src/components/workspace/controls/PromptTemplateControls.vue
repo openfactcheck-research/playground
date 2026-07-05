@@ -1,44 +1,30 @@
 <script setup lang="ts">
-import type * as Blockly from 'blockly/core'
+import type { Role } from '@/blockly/blocks/promptTemplate'
+import * as Blockly from 'blockly/core'
 import { createHighlighter } from 'shiki'
-import { reactive, watch } from 'vue'
+import { onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { templateRows } from '@/blockly/blocks/promptTemplate'
 
 const props = defineProps<{
   block: Blockly.Block
 }>()
 
-// The template's two message bodies, each its own editor.
-const SECTIONS = [
-  { field: 'SYSTEM_TEXT', label: 'System', placeholder: 'Optional system prompt; may use {{variables}}.' },
-  { field: 'USER_TEXT', label: 'User', placeholder: 'User prompt. Use {{variable}} for run-time values.' },
-] as const
+const LABEL: Record<Role, string> = { system: 'System', user: 'User', assistant: 'Assistant' }
+const PLACEHOLDER: Record<Role, string> = {
+  system: 'Optional system prompt; may use {{variables}}.',
+  user: 'User prompt. Use {{variable}} for run-time values.',
+  assistant: 'Assistant message; may use {{variables}}.',
+}
 
-// ---------------------------------------------------------------------------
-// Reactive binding to the Blockly field values.
-// ---------------------------------------------------------------------------
+type Row = { id: string, role: Role, field: string }
 
+const rows = ref<Row[]>([])
 const values = reactive<Record<string, string>>({})
 const highlighted = reactive<Record<string, string>>({})
 
-watch(() => props.block, (blk) => {
-  for (const { field } of SECTIONS) {
-    values[field] = blk.getFieldValue(field) ?? ''
-    void highlight(field)
-  }
-}, { immediate: true })
-
-function syncToBlock(field: string, value: string) {
-  values[field] = value
-  props.block.setFieldValue(value, field)
-  void highlight(field)
-}
-
-function charCount(field: string): number {
-  return (values[field] ?? '').length
-}
-
 // ---------------------------------------------------------------------------
-// Shiki highlighter (markdown, dual theme, line numbers).
+// Shiki highlighter (markdown, dual theme, line numbers). Defined before the
+// watcher below so the immediate mount-time highlight call can reach it.
 // ---------------------------------------------------------------------------
 
 let _highlighter: ReturnType<typeof createHighlighter> | null = null
@@ -50,7 +36,7 @@ function getHighlighter() {
   })
 }
 
-async function highlight(field: string) {
+async function highlight(field: string): Promise<void> {
   // Use a zero-width space for empty content so Shiki produces at least one
   // line (keeps line numbers visible).
   const source = values[field] || '​'
@@ -82,10 +68,29 @@ async function highlight(field: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Sync scroll between each textarea and its backdrop (the preceding sibling).
+// Reactive binding to the block's message rows and their field values.
 // ---------------------------------------------------------------------------
 
-function syncScroll(event: Event) {
+function refresh(): void {
+  rows.value = templateRows(props.block)
+  for (const { field } of rows.value) {
+    values[field] = props.block.getFieldValue(field) ?? ''
+    void highlight(field)
+  }
+}
+
+function syncToBlock(field: string, value: string): void {
+  values[field] = value
+  props.block.setFieldValue(value, field)
+  void highlight(field)
+}
+
+function charCount(field: string): number {
+  return (values[field] ?? '').length
+}
+
+// Sync scroll between each textarea and its backdrop (the preceding sibling).
+function syncScroll(event: Event): void {
   const textarea = event.target as HTMLTextAreaElement
   const backdrop = textarea.previousElementSibling as HTMLElement | null
   if (backdrop) {
@@ -93,45 +98,80 @@ function syncScroll(event: Event) {
     backdrop.scrollLeft = textarea.scrollLeft
   }
 }
+
+// Keep the panel in step with mutator changes (rows added, removed, reordered)
+// and with edits made directly on the block.
+function onWorkspaceChange(event: Blockly.Events.Abstract): void {
+  if (event.type !== Blockly.Events.BLOCK_CHANGE)
+    return
+  const change = event as Blockly.Events.BlockChange
+  if (change.blockId !== props.block.id)
+    return
+  if (change.element === 'mutation') {
+    refresh()
+  }
+  else if (change.element === 'field' && typeof change.name === 'string' && change.name.startsWith('TEXT_')) {
+    values[change.name] = props.block.getFieldValue(change.name) ?? ''
+    void highlight(change.name)
+  }
+}
+
+let listeningTo: Blockly.Workspace | null = null
+
+watch(() => props.block, (blk) => {
+  if (listeningTo)
+    listeningTo.removeChangeListener(onWorkspaceChange)
+  listeningTo = blk.workspace
+  listeningTo.addChangeListener(onWorkspaceChange)
+  refresh()
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+  if (listeningTo)
+    listeningTo.removeChangeListener(onWorkspaceChange)
+})
 </script>
 
 <template>
-  <div class="flex flex-1 flex-col gap-4 min-h-0">
-    <div v-for="section in SECTIONS" :key="section.field" class="flex flex-1 flex-col gap-2 min-h-0">
-      <!-- Section header -->
-      <div class="flex items-center gap-1.5">
-        <span class="text-xs font-medium text-foreground">{{ section.label }}</span>
-        <span
-          v-if="values[section.field]"
-          class="ml-auto rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary"
-        >
-          {{ charCount(section.field) }} char{{ charCount(section.field) !== 1 ? 's' : '' }}
-        </span>
-        <span
-          v-else
-          class="ml-auto rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
-        >
-          Empty
-        </span>
-      </div>
+  <div class="flex flex-1 flex-col min-h-0">
+    <!-- Scrolls when the template has more turns than fit. -->
+    <div class="flex flex-1 flex-col gap-4 overflow-y-auto min-h-0 pr-1">
+      <div v-for="row in rows" :key="row.id" class="flex shrink-0 flex-col gap-2">
+        <!-- Section header -->
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs font-medium text-foreground">{{ LABEL[row.role] }}</span>
+          <span
+            v-if="values[row.field]"
+            class="ml-auto rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary"
+          >
+            {{ charCount(row.field) }} char{{ charCount(row.field) !== 1 ? 's' : '' }}
+          </span>
+          <span
+            v-else
+            class="ml-auto rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+          >
+            Empty
+          </span>
+        </div>
 
-      <!-- Editor: textarea overlay on Shiki backdrop -->
-      <div class="prompt-editor relative flex-1 min-h-0 overflow-hidden rounded-md border border-input shadow-xs focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
-        <!-- Shiki highlighted backdrop -->
-        <div
-          class="prompt-backdrop absolute inset-0 overflow-hidden pointer-events-none"
-          v-html="highlighted[section.field]"
-        />
+        <!-- Editor: fixed-height textarea overlay on Shiki backdrop -->
+        <div class="prompt-editor relative h-40 shrink-0 overflow-hidden rounded-md border border-input shadow-xs focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+          <!-- Shiki highlighted backdrop -->
+          <div
+            class="prompt-backdrop absolute inset-0 overflow-hidden pointer-events-none"
+            v-html="highlighted[row.field]"
+          />
 
-        <!-- Transparent textarea on top -->
-        <textarea
-          :value="values[section.field]"
-          :placeholder="section.placeholder"
-          class="prompt-textarea absolute inset-0 w-full h-full resize-none bg-transparent p-0 text-transparent caret-foreground outline-none placeholder:text-muted-foreground"
-          spellcheck="false"
-          @input="syncToBlock(section.field, ($event.target as HTMLTextAreaElement).value)"
-          @scroll="syncScroll"
-        />
+          <!-- Transparent textarea on top -->
+          <textarea
+            :value="values[row.field]"
+            :placeholder="PLACEHOLDER[row.role]"
+            class="prompt-textarea absolute inset-0 w-full h-full resize-none bg-transparent p-0 text-transparent caret-foreground outline-none placeholder:text-muted-foreground"
+            spellcheck="false"
+            @input="syncToBlock(row.field, ($event.target as HTMLTextAreaElement).value)"
+            @scroll="syncScroll"
+          />
+        </div>
       </div>
     </div>
   </div>
