@@ -132,11 +132,9 @@ export async function getModelOptions(providerId: string): Promise<Array<[string
   const models = Object.entries(provider.models)
     .filter(([modelId]) => !excludePattern?.test(modelId))
 
-  models.sort(([, a], [, b]) => {
-    const da = a.release_date ?? ''
-    const db = b.release_date ?? ''
-    return db.localeCompare(da)
-  })
+  // Sort by model name alphabetically, with natural numeric ordering so
+  // versions sort sensibly (gpt-4o before gpt-4o-mini, o3 after o1).
+  models.sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
 
   for (const [modelId] of models) {
     options.push([modelId, modelId])
