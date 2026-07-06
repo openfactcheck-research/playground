@@ -1,5 +1,6 @@
 import { register as registerAgent } from './agent'
 import { register as registerLanguageModel } from './languageModel'
+import { register as registerOpenFactCheck } from './openFactCheck'
 import { register as registerPromptTemplate } from './promptTemplate'
 import { register as registerStructuredOutput } from './structuredOutput'
 import { register as registerTextInput } from './textInput'
@@ -10,4 +11,5 @@ export function registerAllBlocks(): void {
   registerPromptTemplate()
   registerAgent()
   registerStructuredOutput()
+  registerOpenFactCheck()
 }

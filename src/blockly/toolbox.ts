@@ -81,6 +81,9 @@ const ioCategory = category('Input & Output', 'io_category', [
   block('text_input_value'),
   block('structured_output'),
 ])
+const factCheckCategory = category('Fact-Checking', 'factcheck_category', [
+  block('openfactcheck'),
+])
 const modelsAgentsCategory = category('Models & Agents', 'models_category', [
   block('agent'),
   block('language_model'),
@@ -92,6 +95,8 @@ const promptsCategory = category('Prompts', 'prompt_category', [
 export const toolboxConfig = {
   kind: 'categoryToolbox',
   contents: [
+    factCheckCategory,
+    sep(),
     ioCategory,
     modelsAgentsCategory,
     promptsCategory,

@@ -1,5 +1,6 @@
 import { register as registerAgentGenerator } from './agent'
 import { register as registerLanguageModelGenerator } from './languageModel'
+import { register as registerOpenFactCheckGenerator } from './openFactCheck'
 import { register as registerPromptTemplateGenerator } from './promptTemplate'
 import { register as registerStructuredOutputGenerator } from './structuredOutput'
 import { register as registerTextInputGenerators } from './textInput'
@@ -12,4 +13,5 @@ export function registerAllGenerators(): void {
   registerPromptTemplateGenerator()
   registerAgentGenerator()
   registerStructuredOutputGenerator()
+  registerOpenFactCheckGenerator()
 }

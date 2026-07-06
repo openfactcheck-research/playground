@@ -2,13 +2,14 @@
 import type BlocklyWorkspace from './BlocklyWorkspace.vue'
 import type { SelectedBlockInfo } from './BlocklyWorkspace.vue'
 import type { Run } from '@/types/runs'
-import { Code2, Puzzle, Terminal } from 'lucide-vue-next'
+import { ClipboardCheck, Code2, Puzzle, Terminal } from 'lucide-vue-next'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import PanelCode from './PanelCode.vue'
 import PanelControls from './PanelControls.vue'
 import PanelOutput from './PanelOutput.vue'
+import PanelResults from './PanelResults.vue'
 
-export type InspectorPanel = 'controls' | 'code' | 'output'
+export type InspectorPanel = 'controls' | 'code' | 'output' | 'results'
 
 defineProps<{
   code: string
@@ -82,6 +83,21 @@ function togglePanel(panel: InspectorPanel) {
           Output
         </TooltipContent>
       </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <button
+            class="flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+            :class="activePanel === 'results' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'"
+            @click="togglePanel('results')"
+          >
+            <ClipboardCheck :size="16" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="left">
+          Results
+        </TooltipContent>
+      </Tooltip>
     </div>
 
     <!-- Panels: full workspace height, left of icon strip -->
@@ -105,6 +121,13 @@ function togglePanel(panel: InspectorPanel) {
     <Transition name="panel">
       <PanelOutput
         v-if="activePanel === 'output'"
+        class="absolute right-14 top-16 bottom-20"
+        :run="currentRun ?? null"
+      />
+    </Transition>
+    <Transition name="panel">
+      <PanelResults
+        v-if="activePanel === 'results'"
         class="absolute right-14 top-16 bottom-20"
         :run="currentRun ?? null"
       />

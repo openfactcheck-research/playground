@@ -38,3 +38,10 @@ export function varNameFor(
   }
   return name
 }
+
+// Allocate a fresh distinct name from the shared pool, not tied to any block. Use it for
+// a local variable a block needs alongside its own name (which varNameFor gives), since
+// varNameFor returns one name per block. Distinct across the pass, so it never clashes.
+export function distinctName(generator: typeof pythonGenerator, base: string): string {
+  return generator.nameDB_!.getDistinctName(base, Blockly.Names.NameType.VARIABLE)
+}
