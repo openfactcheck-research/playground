@@ -1,16 +1,45 @@
 <script setup lang="ts">
 import type { Run } from '@/types/runs'
-import { Check, CheckCircle, Copy, Loader2, Terminal, XCircle } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { Check, CheckCircle, Copy, Loader2, Terminal, WrapText, XCircle } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { highlight } from '@/lib/highlighter'
 
 const { run } = defineProps<{
   run: Run | null
 }>()
 
 const copied = ref(false)
+const highlightedOutput = ref('')
+
+// Off by default: long lines scroll horizontally. The header button turns wrapping on.
+const wrap = ref(false)
 
 const copyText = computed(() => (run ? [run.error, run.output].filter(Boolean).join('\n\n') : ''))
+
+// The output is JSON when it parses as an object or array (a fact-check result, say),
+// which we syntax-highlight like the code panel; anything else stays plain text.
+const isJson = computed(() => {
+  const text = run?.output?.trim()
+  if (!text || !(text.startsWith('{') || text.startsWith('[')))
+    return false
+  try {
+    JSON.parse(text)
+    return true
+  }
+  catch {
+    return false
+  }
+})
+
+watch(
+  () => run?.output,
+  async (output) => {
+    highlightedOutput.value = output && isJson.value ? await highlight(output, 'json') : ''
+  },
+  { immediate: true },
+)
 
 function copyOutput() {
   if (!copyText.value)
@@ -37,6 +66,21 @@ function copyOutput() {
         <CheckCircle v-else-if="run.status === 'completed'" :size="12" class="text-green-500" />
         <XCircle v-else-if="run.status === 'failed'" :size="12" class="text-red-500" />
       </template>
+
+      <Tooltip v-if="run?.output">
+        <TooltipTrigger as-child>
+          <button
+            class="ml-auto flex h-6 w-6 items-center justify-center rounded transition-colors"
+            :class="wrap ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'"
+            @click="wrap = !wrap"
+          >
+            <WrapText :size="14" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          {{ wrap ? 'Wrapping on' : 'Wrap lines' }}
+        </TooltipContent>
+      </Tooltip>
     </div>
 
     <!-- Content (select-text + stop so the panel's mousedown guard does not block selection) -->
@@ -64,10 +108,17 @@ function copyOutput() {
           {{ run.error }}
         </div>
 
-        <!-- Output -->
+        <!-- Output: JSON is syntax-highlighted like the code panel, everything else is plain text -->
+        <div
+          v-if="run.output && isJson && highlightedOutput"
+          class="shiki-wrapper flex-1 text-xs leading-normal"
+          :class="{ 'no-wrap': !wrap }"
+          v-html="highlightedOutput"
+        />
         <pre
-          v-if="run.output"
-          class="flex-1 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-foreground"
+          v-else-if="run.output"
+          class="flex-1 font-mono text-xs leading-relaxed text-foreground"
+          :class="wrap ? 'whitespace-pre-wrap break-words' : 'whitespace-pre'"
         >{{ run.output }}</pre>
 
         <!-- No output -->
@@ -94,3 +145,13 @@ function copyOutput() {
     </div>
   </div>
 </template>
+
+<style>
+/* Unwrapped: let long lines extend so the panel scrolls horizontally, overriding the
+   wrapping rule the code panel sets globally on `.shiki-wrapper`. */
+.shiki-wrapper.no-wrap pre {
+  white-space: pre;
+  word-break: normal;
+  overflow-x: visible;
+}
+</style>

@@ -1,6 +1,7 @@
 import type * as Blockly from 'blockly/core'
 import { pythonGenerator } from 'blockly/python'
 import { BLOCK_TYPE } from '@/blockly/blocks/languageModel'
+import { samplingArgs } from './modelParams'
 import { varNameFor } from './varNames'
 
 // Maps the block's provider onto the chat layer's per-provider config class.
@@ -18,23 +19,10 @@ export function register(): void {
     const provider = block.getFieldValue('PROVIDER') ?? 'openai'
     const model = block.getFieldValue('MODEL') ?? ''
     const configClass = CONFIG_CLASS[provider] ?? 'OpenAIConfig'
-    const openAICompatible = provider === 'openai' || provider === 'openrouter'
 
     // Map the visible block fields onto the provider config, using the chat layer's
     // own field names and skipping fields the chosen provider's config does not accept.
-    const config: string[] = [`model="${model}"`]
-    if (block.getInput('TEMPERATURE_ROW'))
-      config.push(`temperature=${block.getFieldValue('TEMPERATURE') ?? 0.7}`)
-    if (block.getInput('TOP_P_ROW'))
-      config.push(`top_p=${block.getFieldValue('TOP_P') ?? 1.0}`)
-    if (block.getInput('MAX_TOKENS_ROW'))
-      config.push(`max_output_tokens=${block.getFieldValue('MAX_TOKENS') ?? 4096}`)
-    if (openAICompatible && block.getInput('FREQ_PENALTY_ROW'))
-      config.push(`frequency_penalty=${block.getFieldValue('FREQ_PENALTY') ?? 0}`)
-    if (openAICompatible && block.getInput('PRES_PENALTY_ROW'))
-      config.push(`presence_penalty=${block.getFieldValue('PRES_PENALTY') ?? 0}`)
-    if (openAICompatible && block.getInput('REASONING_EFFORT_ROW'))
-      config.push(`reasoning_effort="${block.getFieldValue('REASONING_EFFORT') ?? 'medium'}"`)
+    const config: string[] = [`model="${model}"`, ...samplingArgs(block)]
 
     // Hoist the import: Blockly groups import statements into one block at the top.
     // The API key is resolved server-side from the user's stored secrets, so none is emitted here.
