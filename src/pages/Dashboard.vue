@@ -86,7 +86,7 @@ const blocklyRef = ref<InstanceType<typeof BlocklyWorkspace> | null>(null)
 const welcomeTourRef = ref<InstanceType<typeof WelcomeTour> | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
-const { currentRun, isRunning, executeRun } = useRuns()
+const { currentRun, progress: runProgress, isRunning, streamRun } = useRuns()
 
 const activeView = ref('workspace')
 const generatedCode = ref('')
@@ -143,12 +143,17 @@ function handleToggleLock() {
   workspaceLocked.value = !workspaceLocked.value
 }
 
+// A fact-check run surfaces its per-claim verdicts, so open the Results panel; otherwise show Output.
+function pipelineHasBlock(state: object, type: string): boolean {
+  return JSON.stringify(state).includes(`"type":"${type}"`)
+}
+
 async function handleRun() {
   const state = blocklyRef.value?.getState()
   if (!state)
     return
-  inspectorPanel.value = 'output'
-  await executeRun(projectId.value, activeTabId.value, state)
+  inspectorPanel.value = pipelineHasBlock(state, 'openfactcheck') ? 'results' : 'output'
+  await streamRun(projectId.value, activeTabId.value, state)
 }
 
 function handleChangeView(view: string) {
@@ -211,6 +216,7 @@ async function handleLogout() {
             :highlight-code="blockCodeHighlight ?? undefined"
             :blockly-ref="blocklyRef"
             :current-run="currentRun"
+            :run-progress="runProgress"
             @freeze="blocklyRef?.freezeSelectedBlock()"
           />
           <WorkspaceTopControls
