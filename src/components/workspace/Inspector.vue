@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type BlocklyWorkspace from './BlocklyWorkspace.vue'
 import type { SelectedBlockInfo } from './BlocklyWorkspace.vue'
-import type { Run } from '@/types/runs'
+import type { Run, RunProgress } from '@/types/runs'
 import { ClipboardCheck, Code2, Puzzle, Terminal } from 'lucide-vue-next'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import PanelCode from './PanelCode.vue'
@@ -17,6 +17,7 @@ defineProps<{
   highlightCode?: string
   blocklyRef?: InstanceType<typeof BlocklyWorkspace> | null
   currentRun?: Run | null
+  runProgress?: RunProgress | null
 }>()
 
 const emit = defineEmits<{
@@ -123,6 +124,7 @@ function togglePanel(panel: InspectorPanel) {
         v-if="activePanel === 'output'"
         class="absolute right-14 top-16 bottom-20"
         :run="currentRun ?? null"
+        :progress="runProgress ?? null"
       />
     </Transition>
     <Transition name="panel">
@@ -130,6 +132,7 @@ function togglePanel(panel: InspectorPanel) {
         v-if="activePanel === 'results'"
         class="absolute right-14 top-16 bottom-20"
         :run="currentRun ?? null"
+        :progress="runProgress ?? null"
       />
     </Transition>
   </aside>

@@ -171,3 +171,63 @@ export async function apiRequest<T>(method: HttpMethod, path: string, body?: unk
     ? lastError
     : new ApiError('Request failed after retry', 0)
 }
+
+// ---------------------------------------------------------------------------
+// Streaming request (newline-delimited JSON)
+// ---------------------------------------------------------------------------
+
+// POST the body and yield each newline-delimited JSON object from the streamed
+// response (keys converted snake_case -> camelCase). Unlike apiRequest there is
+// no timeout or retry: a run can take minutes and a stream cannot be replayed.
+export async function* apiStream(path: string, body: unknown): AsyncGenerator<unknown> {
+  if (!BASE_URL)
+    throw new ApiError('API URL not configured', 0)
+
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = await getAuthToken()
+  if (token)
+    headers.Authorization = `Bearer ${token}`
+
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(mapKeys(body, camelToSnake)),
+  })
+
+  if (!response.ok || !response.body) {
+    let detail = response.statusText
+    try {
+      detail = ((await response.json()) as { detail?: string }).detail ?? detail
+    }
+    catch {
+      // No JSON error body; keep the status text.
+    }
+    throw new ApiError(detail, response.status)
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done)
+        break
+      buffer += decoder.decode(value, { stream: true })
+      let newline = buffer.indexOf('\n')
+      while (newline >= 0) {
+        const line = buffer.slice(0, newline).trim()
+        buffer = buffer.slice(newline + 1)
+        if (line)
+          yield mapKeys(JSON.parse(line), snakeToCamel)
+        newline = buffer.indexOf('\n')
+      }
+    }
+    const rest = buffer.trim()
+    if (rest)
+      yield mapKeys(JSON.parse(rest), snakeToCamel)
+  }
+  finally {
+    reader.releaseLock()
+  }
+}

@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import type { Run } from '@/types/runs'
-import { Check, CheckCircle, Copy, Loader2, Terminal, WrapText, XCircle } from 'lucide-vue-next'
+import type { Run, RunProgress, StageStatus } from '@/types/runs'
+import { Check, CheckCircle, Copy, Loader2, Terminal, WrapText, X, XCircle } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { highlight } from '@/lib/highlighter'
 
-const { run } = defineProps<{
+const { run, progress = null } = defineProps<{
   run: Run | null
+  progress?: RunProgress | null
 }>()
 
 const copied = ref(false)
@@ -40,6 +41,15 @@ watch(
   },
   { immediate: true },
 )
+
+// Circular step marker styling: filled green when done, outlined for the active and failed steps.
+function stageMarkerClass(status: StageStatus): string {
+  if (status === 'done')
+    return 'border-transparent bg-green-500 text-white'
+  if (status === 'failed')
+    return 'border-red-500 bg-card text-red-500'
+  return 'border-primary bg-card text-primary'
+}
 
 function copyOutput() {
   if (!copyText.value)
@@ -93,12 +103,44 @@ function copyOutput() {
         </p>
       </div>
 
-      <!-- Loading state -->
-      <div v-else-if="run.status === 'running'" class="flex-1 flex flex-col items-center justify-center text-center">
-        <Loader2 :size="32" :stroke-width="1.5" class="mb-3 animate-spin text-muted-foreground/50" />
-        <p class="text-sm text-muted-foreground">
-          Running pipeline...
-        </p>
+      <!-- Loading state: a live stepper of pipeline stages, or a spinner before the first event -->
+      <div v-else-if="run.status === 'running'" class="flex-1 flex flex-col min-h-0">
+        <ol v-if="progress && progress.stages.length" class="relative flex flex-col">
+          <li
+            v-for="(stage, index) in progress.stages"
+            :key="stage.role"
+            class="relative flex items-center gap-3 pb-5 last:pb-0"
+          >
+            <!-- Rail connecting this marker to the next; turns green once the step is done. -->
+            <span
+              v-if="index < progress.stages.length - 1"
+              class="absolute left-3 top-6 h-full w-px -translate-x-1/2"
+              :class="stage.status === 'done' ? 'bg-green-500/40' : 'bg-border'"
+            />
+            <span
+              class="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border bg-card"
+              :class="stageMarkerClass(stage.status)"
+            >
+              <Loader2 v-if="stage.status === 'running'" :size="12" class="animate-spin" />
+              <Check v-else-if="stage.status === 'done'" :size="12" :stroke-width="3" />
+              <X v-else :size="12" :stroke-width="3" />
+            </span>
+            <span
+              class="text-sm"
+              :class="stage.status === 'failed'
+                ? 'font-medium text-red-600 dark:text-red-400'
+                : stage.status === 'running' ? 'font-medium text-foreground' : 'text-foreground'"
+            >
+              {{ stage.label }}
+            </span>
+          </li>
+        </ol>
+        <div v-else class="flex-1 flex flex-col items-center justify-center text-center">
+          <Loader2 :size="32" :stroke-width="1.5" class="mb-3 animate-spin text-muted-foreground/50" />
+          <p class="text-sm text-muted-foreground">
+            Running pipeline...
+          </p>
+        </div>
       </div>
 
       <!-- Result -->

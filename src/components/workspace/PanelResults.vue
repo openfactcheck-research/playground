@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import type { FactCheckResult, VerdictLabel } from '@/types/result'
-import type { Run } from '@/types/runs'
+import type { Run, RunProgress } from '@/types/runs'
 import { CheckCircle, ClipboardCheck, Loader2, XCircle } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { parseResult } from '@/types/result'
 
-const { run } = defineProps<{
+const { run, progress = null } = defineProps<{
   run: Run | null
+  progress?: RunProgress | null
 }>()
 
 const result = computed<FactCheckResult | null>(() => (run?.output ? parseResult(run.output) : null))
+
+// Per-claim verdicts as they fill in live, shown while the run streams.
+const liveVerdicts = computed(() => progress?.verdicts ?? [])
 
 // Per-label display: a readable name and the colour it reads in.
 const LABEL_META: Record<VerdictLabel, { text: string, dot: string, chip: string }> = {
@@ -58,12 +62,47 @@ const factual = computed(() => {
         </p>
       </div>
 
-      <!-- Loading -->
-      <div v-else-if="run.status === 'running'" class="flex-1 flex flex-col items-center justify-center text-center">
-        <Loader2 :size="32" :stroke-width="1.5" class="mb-3 animate-spin text-muted-foreground/50" />
-        <p class="text-sm text-muted-foreground">
-          Running pipeline...
-        </p>
+      <!-- Loading: per-claim cards fill in live, or a spinner before the first claim -->
+      <div v-else-if="run.status === 'running'" class="flex-1 flex flex-col min-h-0">
+        <ul v-if="liveVerdicts.length" class="flex flex-col gap-3">
+          <li v-for="(verdict, index) in liveVerdicts" :key="index" class="rounded-md border border-border p-3">
+            <div class="mb-2 flex items-start justify-between gap-2">
+              <p class="flex-1 text-xs font-medium leading-relaxed text-foreground">
+                {{ verdict.claim }}
+              </p>
+              <span
+                v-if="verdict.status === 'verifying'"
+                class="inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+              >
+                <Loader2 :size="10" class="animate-spin" />
+                Verifying
+              </span>
+              <span
+                v-else-if="verdict.label"
+                class="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                :class="LABEL_META[verdict.label].chip"
+              >
+                <CheckCircle v-if="verdict.label === 'supported'" :size="10" />
+                <XCircle v-else-if="verdict.label === 'refuted'" :size="10" />
+                {{ LABEL_META[verdict.label].text }}
+              </span>
+            </div>
+
+            <p v-if="verdict.reasoning" class="whitespace-pre-wrap break-words text-xs leading-relaxed text-muted-foreground">
+              {{ verdict.reasoning }}
+            </p>
+
+            <p v-if="verdict.correction" class="mt-2 text-xs leading-relaxed text-green-600 dark:text-green-400">
+              Correction: {{ verdict.correction }}
+            </p>
+          </li>
+        </ul>
+        <div v-else class="flex-1 flex flex-col items-center justify-center text-center">
+          <Loader2 :size="32" :stroke-width="1.5" class="mb-3 animate-spin text-muted-foreground/50" />
+          <p class="text-sm text-muted-foreground">
+            Running pipeline...
+          </p>
+        </div>
       </div>
 
       <!-- Not a fact-check result -->
